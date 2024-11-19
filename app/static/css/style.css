@@ -48,42 +48,177 @@ body {
 
 .table-hover tbody tr:hover {
     background-color: var(--bg-secondary);
-    color: var(--text-primary);
+    color: var(--text-primary) !important;
 }
 
-.table td {
-    vertical-align: middle;
+/* Link styles */
+a {
+    color: var(--primary);
+    text-decoration: none;
 }
 
-/* Form controls */
-.form-control, .form-select {
-    background-color: var(--bg-secondary);
+a:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+/* Form styles */
+.form-control {
+    background-color: var(--bg-card);
     border-color: var(--border-color);
     color: var(--text-primary);
 }
 
-.form-control:focus, .form-select:focus {
-    background-color: var(--bg-secondary);
+.form-control:focus {
+    background-color: var(--bg-card);
     border-color: var(--primary);
     color: var(--text-primary);
+    box-shadow: 0 0 0 0.2rem rgba(4, 150, 255, 0.25);
 }
 
 /* Button styles */
-.btn-check:checked + .btn-outline-primary {
+.btn-primary {
     background-color: var(--primary);
-    border-color: var(--primary);
-    color: white;
-}
-
-.btn-outline-primary {
-    color: var(--primary);
     border-color: var(--primary);
 }
 
-.btn-outline-primary:hover {
-    background-color: var(--primary);
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+/* Navbar styles */
+.navbar {
+    background-color: var(--bg-secondary) !important;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Alert styles */
+.alert-info {
+    background-color: rgba(23, 162, 184, 0.2);
+    border-color: rgba(23, 162, 184, 0.3);
+    color: var(--text-primary);
+}
+
+.alert-success {
+    background-color: rgba(40, 167, 69, 0.2);
+    border-color: rgba(40, 167, 69, 0.3);
+    color: var(--text-primary);
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.2);
+    border-color: rgba(220, 53, 69, 0.3);
+    color: var(--text-primary);
+}
+
+/* Fix hover text colors */
+.table-hover tbody tr:hover td,
+.table-hover tbody tr:hover th,
+.table-hover tbody tr:hover a {
+    color: var(--text-primary) !important;
+}
+
+/* Fix dropdown text colors */
+.dropdown-menu {
+    background-color: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+.dropdown-item {
+    color: var(--text-primary);
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* Game card styles */
+.game-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border-radius: 0.25rem;
+}
+
+.game-card:hover {
     border-color: var(--primary);
-    color: white;
+}
+
+.team-logo {
+    max-width: 50px;
+    height: auto;
+}
+
+.team-name {
+    color: var(--text-primary);
+    font-weight: bold;
+}
+
+.game-time {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.game-status {
+    font-weight: bold;
+}
+
+.status-scheduled {
+    color: var(--info);
+}
+
+.status-in-progress {
+    color: var(--warning);
+}
+
+.status-final {
+    color: var(--success);
+}
+
+/* Standings table */
+.standings-table th {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.standings-table td {
+    vertical-align: middle;
+}
+
+/* User management table */
+.user-table td {
+    vertical-align: middle;
+}
+
+.user-table .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Fix all hover states to maintain light text */
+*:hover {
+    color: inherit;
+}
+
+a:hover,
+button:hover,
+.btn:hover {
+    color: inherit;
+}
+
+/* Ensure form inputs maintain light text */
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-secondary) !important;
+}
+
+input:focus::placeholder,
+textarea:focus::placeholder {
+    color: var(--text-secondary) !important;
 }
 
 /* Team styles */
