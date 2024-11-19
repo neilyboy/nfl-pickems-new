@@ -374,6 +374,28 @@ textarea:focus::placeholder {
 /* Badge styles */
 .badge {
     font-weight: 500;
+    color: var(--text-primary) !important;
+}
+
+.badge.bg-light {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+}
+
+.badge.bg-light.text-dark {
+    color: var(--text-primary) !important;
+}
+
+/* Ensure game scores are visible */
+.game-score {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Team score badges */
+.team-score {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
 }
 
 /* Picks Container */
