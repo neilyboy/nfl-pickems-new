@@ -22,7 +22,6 @@ def admin_required(f):
 @bp.route('/')
 @bp.route('/standings', defaults={'week': None})
 @bp.route('/standings/<int:week>')
-@login_required
 def standings(week=None):
     current_week = get_current_week()
     selected_week = week if week is not None else current_week

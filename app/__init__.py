@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, redirect, url_for
 from config import Config
 from app.extensions import db, login, migrate, csrf
 from app.scheduler import init_scheduler
@@ -43,7 +43,7 @@ def create_app(config_class=Config):
 
     @app.route('/')
     def index():
-        return redirect(url_for('admin.index'))
+        return redirect(url_for('main.standings'))
 
     @app.cli.command('init-db')
     def init_db():
