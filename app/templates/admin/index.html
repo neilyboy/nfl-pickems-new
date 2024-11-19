@@ -233,7 +233,8 @@ function backupDatabase() {
     fetch('/admin/backup-db', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
         }
     })
     .then(handleResponse)
@@ -262,6 +263,7 @@ function restoreDatabase(event) {
     setButtonLoading('restore-db-btn', true);
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('csrf_token', '{{ csrf_token() }}');
 
     fetch('/admin/restore-db', {
         method: 'POST',
@@ -294,7 +296,8 @@ function changePassword() {
     fetch('/admin/change-password', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
         },
         body: JSON.stringify({
             current_password: currentPassword,

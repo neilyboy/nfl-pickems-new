@@ -1,4 +1,4 @@
-from flask import render_template, jsonify, request, current_app, send_file
+from flask import render_template, jsonify, request, current_app, send_file, url_for
 from app.admin import bp
 from flask_login import login_required, current_user
 from app.decorators import admin_required
@@ -54,16 +54,28 @@ def backup_db():
         # Copy the database file
         shutil.copy2(db_path, backup_file)
 
-        # Return the backup file
-        return send_file(
-            backup_file,
-            as_attachment=True,
-            download_name=f'nfl_pickems_backup_{timestamp}.db'
-        )
+        # Create a download URL
+        download_url = url_for('admin.download_backup', filename=f'nfl_pickems_backup_{timestamp}.db')
+        return jsonify({'download_url': download_url})
 
     except Exception as e:
         logger.error(f"Database backup failed: {str(e)}")
         return jsonify({'error': 'Failed to backup database'}), 500
+
+@bp.route('/download-backup/<filename>')
+@login_required
+@admin_required
+def download_backup(filename):
+    try:
+        backup_dir = os.path.join(current_app.root_path, '..', 'backups')
+        return send_file(
+            os.path.join(backup_dir, filename),
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        logger.error(f"Failed to download backup: {str(e)}")
+        return jsonify({'error': 'Failed to download backup'}), 500
 
 @bp.route('/restore-db', methods=['POST'])
 @login_required
