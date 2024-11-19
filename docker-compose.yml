@@ -6,11 +6,14 @@ services:
     ports:
       - "8000:8000"
     volumes:
+      - .:/app
       - ./instance:/app/instance
       - ./backups:/app/backups
+      - ./migrations:/app/migrations
     env_file:
       - .env
     restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
 
   nginx:
     image: nginx:alpine

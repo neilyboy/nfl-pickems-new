@@ -118,6 +118,10 @@ print_status "Updating docker-compose configuration..."
 sed -i.bak "s/- \"80:80\"/- \"$NGINX_PORT:80\"/" docker-compose.yml
 sed -i.bak "s/- \"8000:8000\"/- \"$APP_PORT:8000\"/" docker-compose.yml
 
+# Export current user's UID and GID for Docker
+export UID=$(id -u)
+export GID=$(id -g)
+
 # Create directories if they don't exist
 print_status "Creating required directories..."
 mkdir -p instance backups migrations
@@ -144,7 +148,7 @@ fi
 
 # Stop any running containers
 print_status "Stopping any running containers..."
-docker-compose down || true
+docker compose down || true
 
 # Configure git to use HTTPS instead of SSH
 git config --global url."https://github.com/".insteadOf git@github.com:
@@ -175,7 +179,7 @@ fi
 
 # Build and start containers
 print_status "Building and starting containers..."
-docker-compose up -d --build
+docker compose up -d --build
 
 # Wait for web container to be ready
 print_status "Waiting for web container to be ready..."
@@ -185,26 +189,26 @@ sleep 10
 print_status "Initializing database..."
 if [ ! -f migrations/alembic.ini ]; then
     print_status "First time setup: Initializing migrations..."
-    docker-compose exec -T web flask db init
+    docker compose exec -T web flask db init
 fi
 
 # Run database migrations
 print_status "Running database migrations..."
-if ! docker-compose exec -T web flask db migrate -m "Initial migration"; then
+if ! docker compose exec -T web flask db migrate -m "Initial migration"; then
     print_error "Database migration generation failed!"
-    docker-compose logs web
+    docker compose logs web
     exit 1
 fi
 
-if ! docker-compose exec -T web flask db upgrade; then
+if ! docker compose exec -T web flask db upgrade; then
     print_error "Database migration failed!"
-    docker-compose logs web
+    docker compose logs web
     exit 1
 fi
 
 # Create admin user if it doesn't exist
 print_status "Checking admin user..."
-if ! docker-compose exec -T web python create_admin.py; then
+if ! docker compose exec -T web python create_admin.py; then
     print_error "Admin user creation failed!"
     exit 1
 fi
@@ -220,10 +224,10 @@ if grep -q "server_name" nginx.conf && ! grep -q "localhost" nginx.conf; then
 fi
 
 # Check if containers are running
-if docker-compose ps | grep -q "Up"; then
+if docker compose ps | grep -q "Up"; then
     print_status "Deployment successful!"
     echo -e "\n${GREEN}Application Status:${NC}"
-    docker-compose ps
+    docker compose ps
     
     # Get the public IP
     PUBLIC_IP=$(curl -s ifconfig.me)
@@ -236,9 +240,9 @@ if docker-compose ps | grep -q "Up"; then
     fi
     
     echo -e "\n${YELLOW}Useful Commands:${NC}"
-    echo "View logs: docker-compose logs -f"
-    echo "Restart app: docker-compose restart"
-    echo "Stop app: docker-compose down"
+    echo "View logs: docker compose logs -f"
+    echo "Restart app: docker compose restart"
+    echo "Stop app: docker compose down"
     
     # Save port configuration
     echo -e "\n${GREEN}Port Configuration:${NC}"
@@ -246,6 +250,6 @@ if docker-compose ps | grep -q "Up"; then
     echo "Application port: $APP_PORT"
     echo "These settings have been saved to docker-compose.yml"
 else
-    print_error "Deployment failed! Check logs with: docker-compose logs"
+    print_error "Deployment failed! Check logs with: docker compose logs"
     exit 1
 fi
