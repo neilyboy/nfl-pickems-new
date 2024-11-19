@@ -137,6 +137,8 @@ if [ ! -f .env ]; then
     print_warning ".env file not found. Creating from .env.example..."
     if [ -f .env.example ]; then
         cp .env.example .env
+        # Update DATABASE_URL in .env
+        echo "DATABASE_URL=sqlite:///$(pwd)/instance/app.db" >> .env
         print_status "Please edit .env with your production settings"
         print_warning "Press Enter when ready to continue..."
         read
@@ -148,7 +150,7 @@ fi
 
 # Stop any running containers
 print_status "Stopping any running containers..."
-docker compose down || true
+docker compose down -v || true
 
 # Configure git to use HTTPS instead of SSH
 git config --global url."https://github.com/".insteadOf git@github.com:
