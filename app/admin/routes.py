@@ -49,7 +49,10 @@ def backup_db():
         backup_file = os.path.join(backup_dir, f'nfl_pickems_backup_{timestamp}.db')
 
         # Get the path to the current database
-        db_path = os.path.join(current_app.root_path, '..', 'instance', 'nfl_pickems.db')
+        db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+        if not os.path.exists(db_path):
+            logger.error(f"Database file not found at {db_path}")
+            return jsonify({'error': 'Database file not found'}), 404
 
         # Copy the database file
         shutil.copy2(db_path, backup_file)
@@ -93,7 +96,7 @@ def restore_db():
             return jsonify({'error': 'Invalid file format. Must be a .db file'}), 400
 
         # Get the path to the current database
-        db_path = os.path.join(current_app.root_path, '..', 'instance', 'nfl_pickems.db')
+        db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
 
         # Create a backup of the current database before restoring
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
