@@ -9,9 +9,12 @@ A web application for managing NFL game predictions with friends. Users can make
 - Standings page showing pick accuracy
 - Monday Night Football total points prediction
 - Admin interface for managing users and games
+  - Database backup and restore
+  - Password management
+  - User management
 - Responsive design for mobile and desktop
 
-## Installation
+## Local Development Setup
 
 1. Clone the repository:
 ```bash
@@ -30,31 +33,89 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Initialize the database:
+4. Create environment variables:
 ```bash
+cp .env.example .env
+# Edit .env with your configuration
+```
+
+5. Initialize the database:
+```bash
+flask db upgrade
 python init_db.py
 ```
 
-5. Create an admin user:
+6. Create an admin user:
 ```bash
 python create_admin.py
 ```
 
-## Running the Application
-
-1. Start the server:
+7. Start the development server:
 ```bash
-./start_server.sh
+flask run
 ```
 
-2. Access the application at `http://localhost:5000`
+## Production Deployment
 
-## Development
+### Using Docker (Recommended)
 
-- The application uses Flask for the web framework
-- SQLAlchemy for database management
-- ESPN API for game data
-- Bootstrap 5 for the frontend
+1. Clone the repository:
+```bash
+git clone [your-repo-url]
+cd nfl-pickems
+```
+
+2. Set up environment variables:
+```bash
+cp .env.example .env
+# Edit .env with your production configuration
+```
+
+3. Build and start the containers:
+```bash
+docker-compose up -d --build
+```
+
+4. Initialize the database:
+```bash
+docker-compose exec web flask db upgrade
+docker-compose exec web python init_db.py
+docker-compose exec web python create_admin.py
+```
+
+The application will be available at:
+- HTTP: http://your-domain
+- Container port: 8000
+- Nginx port: 80
+
+### Manual Deployment
+
+1. Clone and set up:
+```bash
+git clone [your-repo-url]
+cd nfl-pickems
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+2. Set up environment variables:
+```bash
+cp .env.example .env
+# Edit .env with your production configuration
+```
+
+3. Initialize the database:
+```bash
+flask db upgrade
+python init_db.py
+python create_admin.py
+```
+
+4. Run with gunicorn:
+```bash
+gunicorn --bind 0.0.0.0:8000 --workers 4 run:app
+```
 
 ## Project Structure
 
@@ -66,6 +127,28 @@ python create_admin.py
   - `/static` - Static files (CSS, images)
   - `/templates` - Jinja2 templates
   - `/utils` - Utility functions
+- `/instance` - Instance-specific files (database)
+- `/backups` - Database backups
+- `/migrations` - Database migrations
+
+## Backup and Restore
+
+The application includes built-in backup and restore functionality:
+
+1. Access the admin dashboard
+2. Use the "Backup Database" button to create and download a backup
+3. Use the "Restore Database" to restore from a backup file
+
+Backups are stored in the `/backups` directory with timestamps.
+
+## Security
+
+- All admin routes are protected
+- Passwords are hashed using Werkzeug security
+- CSRF protection on all forms
+- Secure session handling
+- Regular database backups
+- Input validation and sanitization
 
 ## Contributing
 
@@ -78,3 +161,7 @@ python create_admin.py
 ## License
 
 MIT License
+
+## Support
+
+For issues and feature requests, please create an issue on GitHub.
