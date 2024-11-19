@@ -223,60 +223,66 @@ class GameService:
             week: Week number to update. If None, uses current week
             force: If True, forces update even if cache exists
         """
-        # Get current NFL week if not specified
-        if week is None:
-            current = ESPNApiService.get_current_nfl_week()
-            week = current['week']
-            season_type = current['season_type']
-            year = current['year']
-            logger.info(f"Current NFL week: {week}, season_type: {season_type}, year: {year}")
-        else:
-            season_type = 2  # Regular season
-            year = datetime.now().year
-            
-        # Check cache first
-        if not force:
-            cached_games = GameCache.query.filter_by(
-                week=week,
-                season_type=season_type,
-                year=year
-            ).all()
-            
-            if cached_games:
-                logger.info(f"Found {len(cached_games)} cached games for week {week}")
-                # Convert to dictionary format
-                return [json.loads(game.data) for game in cached_games]
-        
-        # Fetch fresh data from ESPN
-        logger.info(f"Fetching fresh game data from ESPN for week {week}")
-        games = ESPNApiService.get_week_games(week, season_type, year)
-        
-        if not games:
-            logger.warning(f"No games found for week {week}. This might be the offseason.")
-            # If it's the offseason, try to get the most recent regular season week
-            if season_type == 2:  # Regular season
-                # Try the previous year's games
-                logger.info("Trying previous year's games...")
-                games = ESPNApiService.get_week_games(1, season_type, year - 1)
-        
-        # Update cache
         try:
-            GameService.update_game_cache(games)
+            # Validate week number
+            if week is not None and (week < 1 or week > 18):
+                logger.warning(f"Invalid week number: {week}")
+                return []
+
+            # Get current NFL week if not specified
+            if week is None:
+                current = ESPNApiService.get_current_nfl_week()
+                week = current['week']
+                season_type = current['season_type']
+                year = current['year']
+                logger.info(f"Current NFL week: {week}, season_type: {season_type}, year: {year}")
+            else:
+                season_type = 2  # Regular season
+                year = datetime.now().year
             
-            # Update pick results if game is final
-            for game in games:
-                existing_game = GameCache.query.filter_by(game_id=game['game_id']).first()
-                if existing_game and existing_game.is_final():
-                    GameService.update_pick_results(existing_game)
+            # Check cache first
+            if not force:
+                cached_games = GameCache.query.filter_by(
+                    week=week,
+                    season_type=season_type,
+                    year=year
+                ).all()
                 
-            logger.info(f"Successfully updated game cache for week {week}")
+                if cached_games:
+                    logger.info(f"Found {len(cached_games)} cached games for week {week}")
+                    # Convert to dictionary format
+                    return [json.loads(game.data) for game in cached_games]
+            
+            # Fetch fresh data from ESPN
+            logger.info(f"Fetching fresh game data from ESPN for week {week}")
+            games = ESPNApiService.get_week_games(week, season_type, year)
+            
+            if not games:
+                logger.warning(f"No games found for week {week}. This might be the offseason.")
+                return []
+            
+            # Update cache
+            try:
+                GameService.update_game_cache(games)
+                
+                # Update pick results if game is final
+                for game in games:
+                    existing_game = GameCache.query.filter_by(game_id=game['game_id']).first()
+                    if existing_game and existing_game.is_final():
+                        GameService.update_pick_results(existing_game)
+                    
+                logger.info(f"Successfully updated game cache for week {week}")
+                
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"Error updating game cache: {str(e)}")
+                raise
+                
+            return games
             
         except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error updating game cache: {str(e)}")
-            raise
-            
-        return games
+            logger.error(f"Error in update_week_games: {str(e)}")
+            return []
 
     @staticmethod
     def update_game_cache(games):
@@ -318,7 +324,7 @@ class GameService:
                     logger.info(f"Creating new game record for {game_data['game_id']}")
                     # Create new game
                     new_game = GameCache(
-                        week=game_data['week'],
+                        week=game_data['week']['number'],  # Extract the week number from the week object
                         season_type=game_data['season_type'],
                         year=game_data['year'],
                         game_id=game_data['game_id'],

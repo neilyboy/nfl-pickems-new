@@ -51,6 +51,10 @@ body {
     color: var(--text-primary);
 }
 
+.table td {
+    vertical-align: middle;
+}
+
 /* Form controls */
 .form-control, .form-select {
     background-color: var(--bg-secondary);
@@ -149,4 +153,102 @@ body {
 /* Badge styles */
 .badge {
     font-weight: 500;
+}
+
+/* Picks Container */
+.picks-container {
+    max-width: 100%;
+    padding: 4px;
+    gap: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,0.2) transparent;
+}
+
+.picks-container::-webkit-scrollbar {
+    height: 6px;
+}
+
+.picks-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.picks-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 3px;
+}
+
+/* Team Logos */
+.team-logo-container {
+    position: relative;
+    display: inline-block;
+    padding: 3px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin: 0 1px;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.team-logo-container.correct {
+    border-color: #00c853;  /* Modern green */
+    box-shadow: 0 0 8px rgba(0, 200, 83, 0.4);
+}
+
+.team-logo-container.incorrect {
+    border-color: #ff5252;  /* Modern red */
+    box-shadow: 0 0 8px rgba(255, 82, 82, 0.4);
+}
+
+.team-logo-standings {
+    width: 40px !important;
+    height: 40px !important;
+    object-fit: contain;
+    transition: transform 0.2s;
+}
+
+.team-logo-standings:hover {
+    transform: scale(1.1);
+}
+
+.pick-result-indicator {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    font-size: 0.7rem;
+    padding: 0;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.pick-result-indicator.correct {
+    background-color: #00c853;  /* Modern green */
+    box-shadow: 0 0 8px rgba(0, 200, 83, 0.4);
+}
+
+.pick-result-indicator.incorrect {
+    background-color: #ff5252;  /* Modern red */
+    box-shadow: 0 0 8px rgba(255, 82, 82, 0.4);
+}
+
+.pick-result-indicator i {
+    font-size: 0.75rem;
+    color: white !important;
+    line-height: 1;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pick-container {
+    display: inline-block;
 }

@@ -1,43 +1,25 @@
-# NFL Pick'em Application
+# NFL Pick'em Game
 
-A modern, mobile-responsive web application for tracking NFL pick'em competitions. Inspired by Sleeper.com's design aesthetic.
+A web application for managing NFL game predictions with friends. Users can make picks for each week's games and compete to see who has the most accurate predictions.
 
 ## Features
 
-- 📱 Mobile-first responsive design
-- 📊 Real-time standings and statistics
-- 🏈 Live game tracking via ESPN API
-- 👤 User avatar management
-- 🔐 Admin dashboard for user and pick management
-- 💾 Season data backup and archival
-- 🏆 Weekly and season-long statistics
+- Weekly game picks for all NFL games
+- Real-time game score updates via ESPN API
+- Standings page showing pick accuracy
+- Monday Night Football total points prediction
+- Admin interface for managing users and games
+- Responsive design for mobile and desktop
 
 ## Installation
 
-### Using Docker (Recommended)
-
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/nfl-pickems.git
+git clone [your-repo-url]
 cd nfl-pickems
 ```
 
-2. Build and run with Docker Compose:
-```bash
-docker-compose up --build
-```
-
-The application will be available at `http://localhost:5000`
-
-### Manual Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/nfl-pickems.git
-cd nfl-pickems
-```
-
-2. Create a virtual environment:
+2. Create a virtual environment and activate it:
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -48,56 +30,51 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Set up environment variables:
+4. Initialize the database:
 ```bash
-cp .env.example .env
-# Edit .env with your configuration
+python init_db.py
 ```
 
-5. Initialize the database:
+5. Create an admin user:
 ```bash
-flask db upgrade
+python create_admin.py
 ```
 
-6. Run the application:
+## Running the Application
+
+1. Start the server:
 ```bash
-flask run
+./start_server.sh
 ```
 
-## Environment Variables
+2. Access the application at `http://localhost:5000`
 
-Create a `.env` file with the following variables:
+## Development
 
-```
-FLASK_APP=app
-FLASK_ENV=development
-SECRET_KEY=your-secret-key
-DATABASE_URL=sqlite:///nfl_pickems.db
-ADMIN_PASSWORD=your-admin-password
-```
+- The application uses Flask for the web framework
+- SQLAlchemy for database management
+- ESPN API for game data
+- Bootstrap 5 for the frontend
 
-## Admin Access
+## Project Structure
 
-Default admin credentials:
-- Password: admin
-
-Change the admin password through the admin settings page after first login.
-
-## API Data
-
-The application uses the ESPN NFL API for game data:
-- Endpoint: https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard
-- Data is cached locally and updates every 5 minutes
-- Manual updates available through admin panel
+- `/app` - Main application code
+  - `/admin` - Admin interface routes and forms
+  - `/auth` - Authentication routes
+  - `/models` - Database models
+  - `/services` - Business logic and external API integration
+  - `/static` - Static files (CSS, images)
+  - `/templates` - Jinja2 templates
+  - `/utils` - Utility functions
 
 ## Contributing
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+MIT License

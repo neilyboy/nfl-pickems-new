@@ -42,29 +42,23 @@
                                     <td>{{ "%.1f"|format(user.weekly_percentage) }}%</td>
                                     <td>{{ user.mnf_prediction if user.mnf_prediction else 'No Pick' }}</td>
                                     <td>
-                                        <div class="d-flex flex-wrap gap-2">
+                                        <div class="picks-container d-flex flex-nowrap overflow-auto">
                                             {% for pick in user.picks %}
-                                                <div class="pick-container position-relative">
-                                                    {% if pick.team_picked == pick.away_team %}
-                                                        <img src="{{ nfl_teams[pick.away_team_abbrev]['logo'] }}" 
-                                                             alt="{{ pick.away_team }}" 
-                                                             class="team-logo {% if pick.is_correct == True %}correct{% elif pick.is_correct == False %}incorrect{% endif %}"
-                                                             title="{{ pick.away_team }} {% if pick.game_status == 'STATUS_FINAL' %}({{ pick.away_team_score }}){% endif %}">
-                                                    {% else %}
-                                                        <img src="{{ nfl_teams[pick.home_team_abbrev]['logo'] }}" 
-                                                             alt="{{ pick.home_team }}" 
-                                                             class="team-logo {% if pick.is_correct == True %}correct{% elif pick.is_correct == False %}incorrect{% endif %}"
-                                                             title="{{ pick.home_team }} {% if pick.game_status == 'STATUS_FINAL' %}({{ pick.home_team_score }}){% endif %}">
-                                                    {% endif %}
-                                                    {% if pick.is_correct == True %}
-                                                        <span class="position-absolute top-0 end-0 badge bg-success">
-                                                            <i class="fas fa-check"></i>
-                                                        </span>
-                                                    {% elif pick.is_correct == False %}
-                                                        <span class="position-absolute top-0 end-0 badge bg-danger">
-                                                            <i class="fas fa-times"></i>
-                                                        </span>
-                                                    {% endif %}
+                                                <div class="pick-container position-relative"
+                                                     data-bs-toggle="tooltip"
+                                                     data-bs-placement="top"
+                                                     title="{{ pick.team_picked }}">
+                                                    {% set team = nfl_teams.get(pick.team_picked, {'name': pick.team_picked, 'logo': '/static/img/teams/default.png'}) %}
+                                                    <div class="team-logo-container {% if pick.is_correct == True %}correct{% elif pick.is_correct == False %}incorrect{% endif %}">
+                                                        <img src="{{ team['logo'] }}" 
+                                                             alt="{{ pick.team_picked }}" 
+                                                             class="team-logo-standings {% if pick.is_correct == True %}correct{% elif pick.is_correct == False %}incorrect{% endif %}">
+                                                        {% if pick.is_correct is not none %}
+                                                            <div class="pick-result-indicator {% if pick.is_correct %}correct{% else %}incorrect{% endif %}">
+                                                                <i class="fas {% if pick.is_correct %}fa-check{% else %}fa-times{% endif %}"></i>
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
                                                 </div>
                                             {% endfor %}
                                         </div>
@@ -127,6 +121,9 @@
 
 {% block extra_css %}
 <style>
+/* Add Font Awesome */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+
 .team-logo {
     width: 40px;
     height: 40px;
@@ -222,6 +219,27 @@
 
 .text-danger {
     color: var(--bs-danger) !important;
+}
+
+.team-logo-standings {
+    width: 45px;
+    height: 45px;
+    object-fit: contain;
+}
+
+.pick-result-indicator {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 0.8rem;
+}
+
+.pick-result-indicator.correct {
+    color: #28a745;
+}
+
+.pick-result-indicator.incorrect {
+    color: #dc3545;
 }
 </style>
 {% endblock %}

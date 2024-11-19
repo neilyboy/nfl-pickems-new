@@ -8,11 +8,18 @@ from app.models.user import User
 from app.services.game_service import GameService
 from app.extensions import db
 from app.data.nfl_teams import NFL_TEAMS
+import logging
+logger = logging.getLogger(__name__)
 
 @bp.route('/picks/<int:week>', methods=['GET'])
 @bp.route('/picks/<int:week>/<int:user_id>', methods=['GET'])
 @login_required
 def picks(week, user_id=None):
+    # Validate week number
+    if week < 1 or week > 18:
+        flash(f'Invalid week number: {week}. Please select a week between 1 and 18.', 'warning')
+        return redirect(url_for('picks.picks', week=1))
+
     # Only admins can view other users' picks
     if user_id and not current_user.is_admin:
         flash('You do not have permission to view other users\' picks.', 'danger')
@@ -29,37 +36,53 @@ def picks(week, user_id=None):
     
     if not games:
         flash(f'No games found for week {week}', 'warning')
-        return redirect(url_for('main.index'))
+        return redirect(url_for('picks.picks', week=1))
     
     # Transform game data into the format expected by the template
     transformed_games = []
     mnf_games = []
     
     for game in games:
-        # Debug: Print raw game data
-        print(f"Raw game data: {game}")
-        away_abbrev = game['away_team']['abbreviation']
-        home_abbrev = game['home_team']['abbreviation']
-        print(f"Team abbreviations - Away: {away_abbrev}, Home: {home_abbrev}")
-        
-        transformed_game = {
-            'id': game['game_id'],
-            'away_team_abbrev': away_abbrev,
-            'home_team_abbrev': home_abbrev,
-            'away_team': game['away_team']['display_name'],
-            'home_team': game['home_team']['display_name'],
-            'away_team_score': game['away_team']['score'],
-            'home_team_score': game['home_team']['score'],
-            'game_status': game['status'],
-            'game_time': datetime.fromisoformat(game['date'].replace('Z', '+00:00')).strftime('%I:%M %p'),
-            'is_mnf': game.get('is_mnf', False)
-        }
-        transformed_games.append(transformed_game)
-        
-        # If this is an MNF game, add it to the list
-        if game.get('is_mnf', False):
-            mnf_games.append(transformed_game)
-            print(f"Added MNF game: {transformed_game}")
+        try:
+            # Handle both old and new API formats
+            if isinstance(game.get('away_team'), dict):
+                # New format
+                away_abbrev = game['away_team']['abbreviation']
+                home_abbrev = game['home_team']['abbreviation']
+                away_team = game['away_team']['display_name']
+                home_team = game['home_team']['display_name']
+                away_score = game['away_team']['score']
+                home_score = game['home_team']['score']
+            else:
+                # Old format
+                away_abbrev = game['away_team']
+                home_abbrev = game['home_team']
+                away_team = game['away_team_name']
+                home_team = game['home_team_name']
+                away_score = game['away_score']
+                home_score = game['home_score']
+            
+            transformed_game = {
+                'id': game.get('game_id', game.get('id')),
+                'away_team_abbrev': away_abbrev,
+                'home_team_abbrev': home_abbrev,
+                'away_team': away_team,
+                'home_team': home_team,
+                'away_team_score': away_score,
+                'home_team_score': home_score,
+                'game_status': game.get('status', 'scheduled'),
+                'game_time': datetime.fromisoformat(game['date'].replace('Z', '+00:00')).strftime('%I:%M %p'),
+                'is_mnf': game.get('is_mnf', False)
+            }
+            transformed_games.append(transformed_game)
+            
+            # If this is an MNF game, add it to the list
+            if game.get('is_mnf', False):
+                mnf_games.append(transformed_game)
+        except (KeyError, TypeError) as e:
+            logger.error(f"Error processing game data: {e}")
+            logger.error(f"Raw game data: {game}")
+            continue
     
     # Debug: Print team abbreviations and logo URLs
     for game in transformed_games:
