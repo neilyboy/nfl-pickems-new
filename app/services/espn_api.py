@@ -2,6 +2,7 @@ import requests
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import logging
+from dateutil import tz
 
 logger = logging.getLogger(__name__)
 
@@ -201,33 +202,42 @@ class ESPNApiService:
             
             # Build game data
             try:
-                game_date = datetime.fromisoformat(event.get('date', '').replace('Z', '+00:00'))
+                # Parse the date string and ensure it's timezone aware
+                date_str = event.get('date', '')
+                if date_str:
+                    # Add UTC timezone if not present
+                    if not date_str.endswith('Z') and not '+' in date_str and not '-' in date_str:
+                        date_str += 'Z'
+                    game_date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                else:
+                    game_date = datetime.now(tz=tz.tzutc())
+
                 # If the game date is more than 6 months in the future, it's probably a next season game
                 # Adjust the year to the current year
-                if (game_date - datetime.now()).days > 180:
+                if (game_date - datetime.now(tz=tz.tzutc())).days > 180:
                     current_year = datetime.now().year
                     game_date = game_date.replace(year=current_year)
-                
+            
                 is_monday = game_date.weekday() == 0  # Monday is 0
                 is_mnf = is_monday and ('Monday Night Football' in event.get('name', '') or 
                                       'Monday Night' in event.get('name', '') or
                                       game_date.hour >= 19)  # 7 PM or later
-                
+            
                 # Debug logging for MNF detection
                 logger.info(f"Game: {event.get('name', '')}")
                 logger.info(f"Date: {game_date}, Is Monday: {is_monday}, Hour: {game_date.hour}")
                 logger.info(f"Is MNF: {is_mnf}")
             except (ValueError, TypeError) as e:
                 logger.error(f"Error parsing game date: {e}")
-                game_date = datetime.now()
+                game_date = datetime.now(tz=tz.tzutc())
                 is_mnf = False
-            
+        
             game_data = {
                 'game_id': str(event['id']),
                 'week': event.get('week', {}).get('number', 0),
                 'season_type': event.get('season', {}).get('type', 2),
                 'year': event.get('season', {}).get('year', datetime.now().year),
-                'date': event.get('date', ''),
+                'date': game_date.isoformat(),
                 'status': status,
                 'winning_team': winner,
                 'home_team': {
@@ -252,7 +262,7 @@ class ESPNApiService:
             }
             
             return game_data
-            
+        
         except Exception as e:
             logger.error(f"Error parsing game data: {str(e)}")
             raise

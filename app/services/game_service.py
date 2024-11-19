@@ -6,6 +6,7 @@ from app.extensions import db
 from app.services.espn_api import ESPNApiService
 import logging
 import json
+from datetime import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -256,7 +257,7 @@ class GameService:
                         try:
                             game_data = json.loads(game.data)
                             # Add game time if not present
-                            if 'date' in game_data and 'game_time' not in game_data:
+                            if 'date' in game_data:
                                 game_date = datetime.fromisoformat(game_data['date'].replace('Z', '+00:00'))
                                 game_data['game_time'] = game_date.strftime('%I:%M %p')
                             games.append(game_data)
@@ -275,14 +276,74 @@ class GameService:
             
             # Update cache
             try:
-                GameService.update_game_cache(games)
+                # Update game cache
+                for game_data in games:
+                    try:
+                        # Try to find existing game
+                        existing_game = GameCache.query.filter_by(game_id=game_data['game_id']).first()
+                        
+                        # Get winner if game is final
+                        winning_team = game_data.get('winning_team')
+                        game_status = game_data.get('status', '')
+                        
+                        logger.info(f"Processing game {game_data['game_id']}: {game_data['away_team']['display_name']} @ {game_data['home_team']['display_name']}")
+                        logger.info(f"Status: {game_status}, Winner: {winning_team}")
+                        
+                        if existing_game:
+                            # Log current state
+                            logger.info(f"Existing game found - Current state: status={existing_game.status}, winner={existing_game.winning_team}")
+                            
+                            # Update existing game
+                            existing_game.data = json.dumps(game_data)
+                            existing_game.status = game_status
+                            existing_game.winning_team = winning_team
+                            existing_game.home_team = game_data['home_team']['display_name']
+                            existing_game.away_team = game_data['away_team']['display_name']
+                            existing_game.home_team_abbrev = game_data['home_team']['abbreviation']
+                            existing_game.away_team_abbrev = game_data['away_team']['abbreviation']
+                            existing_game.home_score = game_data['home_team']['score']
+                            existing_game.away_score = game_data['away_team']['score']
+                            existing_game.last_updated = datetime.now(timezone.utc)
+                            
+                            # Update picks if game just finished
+                            if existing_game.is_final():
+                                logger.info(f"Updating picks for finished game {game_data['game_id']}")
+                                GameService.update_pick_results(existing_game)
+                        else:
+                            logger.info(f"Creating new game record for {game_data['game_id']}")
+                            # Create new game
+                            new_game = GameCache(
+                                week=game_data['week'],
+                                season_type=game_data['season_type'],
+                                year=game_data['year'],
+                                game_id=game_data['game_id'],
+                                data=json.dumps(game_data),
+                                status=game_status,
+                                winning_team=winning_team,
+                                home_team=game_data['home_team']['display_name'],
+                                away_team=game_data['away_team']['display_name'],
+                                home_team_abbrev=game_data['home_team']['abbreviation'],
+                                away_team_abbrev=game_data['away_team']['abbreviation'],
+                                home_score=game_data['home_team']['score'],
+                                away_score=game_data['away_team']['score'],
+                                start_time=datetime.fromisoformat(game_data['date']),
+                                is_mnf=game_data.get('is_mnf', False),
+                                venue_name=game_data['venue']['name'],
+                                venue_city=game_data['venue']['city'],
+                                venue_state=game_data['venue']['state']
+                            )
+                            db.session.add(new_game)
+                            
+                            # Update picks if game is final
+                            if new_game.is_final():
+                                logger.info(f"Updating picks for new finished game {game_data['game_id']}")
+                                db.session.flush()  # Ensure new_game has an ID
+                                GameService.update_pick_results(new_game)
+                    except Exception as e:
+                        logger.error(f"Error processing game {game_data.get('game_id', 'unknown')}: {str(e)}")
+                        continue
                 
-                # Update pick results if game is final
-                for game in games:
-                    existing_game = GameCache.query.filter_by(game_id=game['game_id']).first()
-                    if existing_game and existing_game.is_final():
-                        GameService.update_pick_results(existing_game)
-                    
+                db.session.commit()
                 logger.info(f"Successfully updated game cache for week {week}")
                 
             except Exception as e:
@@ -295,6 +356,31 @@ class GameService:
         except Exception as e:
             logger.error(f"Error in update_week_games: {str(e)}")
             return []
+
+    @staticmethod
+    def get_week_games(week: Optional[int] = None, force_update: bool = False) -> List[Dict]:
+        """
+        Get all games for a specific week, using cache when available
+        
+        Args:
+            week: Week number to get games for. If None, uses current week
+            force_update: If True, forces a fresh fetch from ESPN
+        """
+        return GameService.update_week_games(week, force_update)
+
+    @staticmethod
+    def get_current_nfl_week() -> Dict:
+        """Get the current NFL week information"""
+        return ESPNApiService.get_current_nfl_week()
+
+    @staticmethod
+    def get_mnf_game(week: Optional[int] = None) -> Optional[Dict]:
+        """Get the Monday Night Football game for a specific week"""
+        games = GameService.get_week_games(week)
+        for game in games:
+            if game.get('is_mnf'):
+                return game
+        return None
 
     @staticmethod
     def update_game_cache(games):
@@ -326,7 +412,7 @@ class GameService:
                     existing_game.away_team_abbrev = game_data['away_team']['abbreviation']
                     existing_game.home_score = game_data['home_team']['score']
                     existing_game.away_score = game_data['away_team']['score']
-                    existing_game.last_updated = datetime.utcnow()
+                    existing_game.last_updated = datetime.now(timezone.utc)
                     
                     # Update picks if game just finished
                     if existing_game.is_final():
@@ -336,7 +422,7 @@ class GameService:
                     logger.info(f"Creating new game record for {game_data['game_id']}")
                     # Create new game
                     new_game = GameCache(
-                        week=game_data['week']['number'],  # Extract the week number from the week object
+                        week=game_data['week'],
                         season_type=game_data['season_type'],
                         year=game_data['year'],
                         game_id=game_data['game_id'],
@@ -349,7 +435,7 @@ class GameService:
                         away_team_abbrev=game_data['away_team']['abbreviation'],
                         home_score=game_data['home_team']['score'],
                         away_score=game_data['away_team']['score'],
-                        start_time=datetime.fromisoformat(game_data['date'].replace('Z', '+00:00')),
+                        start_time=datetime.fromisoformat(game_data['date']),
                         is_mnf=game_data.get('is_mnf', False),
                         venue_name=game_data['venue']['name'],
                         venue_city=game_data['venue']['city'],
@@ -369,28 +455,3 @@ class GameService:
             db.session.rollback()
             logger.error(f"Error updating game cache: {str(e)}")
             raise
-
-    @staticmethod
-    def get_week_games(week: Optional[int] = None, force_update: bool = False) -> List[Dict]:
-        """
-        Get all games for a specific week, using cache when available
-        
-        Args:
-            week: Week number to get games for. If None, uses current week
-            force_update: If True, forces a fresh fetch from ESPN
-        """
-        return GameService.update_week_games(week, force_update)
-
-    @staticmethod
-    def get_current_nfl_week() -> Dict:
-        """Get the current NFL week information"""
-        return ESPNApiService.get_current_nfl_week()
-
-    @staticmethod
-    def get_mnf_game(week: Optional[int] = None) -> Optional[Dict]:
-        """Get the Monday Night Football game for a specific week"""
-        games = GameService.get_week_games(week)
-        for game in games:
-            if game.get('is_mnf'):
-                return game
-        return None
