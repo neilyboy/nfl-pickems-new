@@ -137,7 +137,7 @@ def picks(week, user_id=None):
                          users=all_users,
                          target_user=target_user)
 
-@bp.route('/submit-picks/<int:week>')
+@bp.route('/submit-picks/<int:week>', methods=['POST'])
 @bp.route('/submit-picks/<int:week>/<int:user_id>', methods=['POST'])
 @login_required
 def submit_picks(week, user_id=None):
