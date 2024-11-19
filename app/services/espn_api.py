@@ -266,7 +266,7 @@ class ESPNApiService:
                     'state': venue.get('address', {}).get('state', '')
                 },
                 'is_mnf': is_mnf,
-                'game_time': local_date.strftime('%I:%M %p')
+                'game_time': local_date.strftime('%a %I:%M %p')  # Include day abbreviation
             }
             
             return game_data

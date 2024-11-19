@@ -71,7 +71,7 @@ def picks(week, user_id=None):
             game_date = datetime.fromisoformat(game['date'].replace('Z', '+00:00'))
             local_tz = pytz.timezone('America/Chicago')  # Central Time
             local_date = game_date.astimezone(local_tz)
-            game_time = local_date.strftime('%I:%M %p')
+            game_time = local_date.strftime('%a %I:%M %p')  # %a adds the day abbreviation (MON, TUE, etc.)
             
             # Use the API's is_mnf flag if available, otherwise detect based on game time
             is_mnf = game.get('is_mnf', False)

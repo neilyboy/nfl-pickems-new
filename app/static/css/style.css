@@ -180,8 +180,9 @@ a:hover {
 }
 
 .game-time {
-    color: var(--text-secondary);
     font-size: 0.9rem;
+    min-width: 110px;  /* Ensure enough space for "THU 07:15 PM" */
+    text-align: right;
 }
 
 .game-status {
@@ -198,6 +199,19 @@ a:hover {
 
 .status-final {
     color: var(--success);
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    gap: 0.5rem;
+}
+
+.game-header .badge {
+    min-width: 80px;
+    text-align: center;
 }
 
 /* Standings table */
