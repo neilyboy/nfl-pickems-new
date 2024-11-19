@@ -136,43 +136,7 @@ def standings(week=None):
                          season_total=sum(1 for g in GameCache.query.all() if g.status == 'STATUS_FINAL'),
                          nfl_teams={k.upper(): v for k, v in NFL_TEAMS.items()})
 
-@bp.route('/picks', methods=['GET'])
-@admin_required
-def make_picks():
-    # Get current week or use query parameter
-    week = request.args.get('week', get_current_week(), type=int)
-    if not week:
-        week = 1
-    
-    # Get all games for the week
-    games = GameCache.query.filter_by(week=week).all()
-    
-    # Get all non-admin users
-    users = User.query.filter_by(is_admin=False).all()
-    
-    # Get MNF games
-    mnf_games = get_mnf_games(week)
-    
-    # Get selected user's picks if user_id is provided
-    selected_user = request.args.get('user_id')
-    user_picks = {}
-    mnf_prediction = None
-    
-    if selected_user:
-        picks = Pick.query.filter_by(user_id=selected_user, week=week).all()
-        for pick in picks:
-            user_picks[pick.game_id] = pick.team_picked
-        mnf_prediction = MNFPrediction.query.filter_by(user_id=selected_user, week=week).first()
-    
-    return render_template('main/make_picks.html',
-        week=week,
-        games=games,
-        users=users,
-        user_picks=user_picks,
-        mnf_games=mnf_games,
-        mnf_prediction=mnf_prediction,
-        selected_user=selected_user
-    )
+# Removed old make_picks route as it's been replaced by picks.picks
 
 @bp.route('/submit_picks', methods=['POST'])
 @admin_required
