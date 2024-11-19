@@ -80,11 +80,34 @@ fi
 
 # Stop any running containers
 print_status "Stopping any running containers..."
-docker-compose down
+docker-compose down || true
 
-# Pull latest changes
-print_status "Pulling latest changes..."
-git pull origin main
+# Configure git to use HTTPS instead of SSH
+git config --global url."https://github.com/".insteadOf git@github.com:
+
+# Check if we're in a git repository
+if [ ! -d .git ]; then
+    print_status "Initializing fresh clone..."
+    cd ..
+    rm -rf nfl-pickems
+    git clone https://github.com/neilyboy/nfl-pickems.git
+    cd nfl-pickems
+    # Copy back the .env file if it exists
+    if [ -f ../.env ]; then
+        cp ../.env .
+    fi
+else
+    # Pull latest changes
+    print_status "Pulling latest changes..."
+    # Stash any local changes
+    git stash || true
+    git pull https://github.com/neilyboy/nfl-pickems.git main || {
+        print_error "Failed to pull latest changes. Please ensure you have the correct repository URL."
+        exit 1
+    }
+    # Pop stashed changes
+    git stash pop || true
+fi
 
 # Build and start containers
 print_status "Building and starting containers..."
