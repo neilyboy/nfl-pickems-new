@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Exit on error
-set -e
-
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -67,14 +64,48 @@ get_valid_port() {
     echo "$port"
 }
 
-# Check if running as root for low ports
-if [ "$EUID" -ne 0 ]; then
-    print_warning "Not running as root. You won't be able to use ports below 1024."
-fi
+# Function to install system dependencies
+install_dependencies() {
+    print_status "Installing system dependencies..."
+    sudo apt update
+    sudo apt install -y \
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        software-properties-common \
+        git \
+        lsof
+
+    # Install Docker if not present
+    if ! command -v docker &> /dev/null; then
+        print_status "Installing Docker..."
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+        sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+        sudo apt update
+        sudo apt install -y docker-ce docker-ce-cli containerd.io
+        
+        # Add current user to docker group
+        sudo usermod -aG docker $USER
+        print_warning "You may need to log out and back in for docker group changes to take effect"
+    fi
+
+    # Install Docker Compose if not present
+    if ! command -v docker-compose &> /dev/null; then
+        print_status "Installing Docker Compose..."
+        sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+    fi
+}
 
 # Check if running on Ubuntu
 if ! grep -q "Ubuntu" /etc/os-release; then
     print_warning "This script is designed for Ubuntu. Your mileage may vary on other distributions."
+fi
+
+# Install dependencies if needed
+read -p "Do you need to install/update system dependencies? (y/n): " install_deps
+if [[ "$install_deps" =~ ^[Yy]$ ]]; then
+    install_dependencies
 fi
 
 # Get port configurations
@@ -86,33 +117,6 @@ APP_PORT=$(get_valid_port 8000 "application")
 print_status "Updating docker-compose configuration..."
 sed -i.bak "s/- \"80:80\"/- \"$NGINX_PORT:80\"/" docker-compose.yml
 sed -i.bak "s/- \"8000:8000\"/- \"$APP_PORT:8000\"/" docker-compose.yml
-
-# Install required packages if not present
-print_status "Checking and installing required packages..."
-apt update
-apt install -y \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    software-properties-common \
-    git \
-    lsof
-
-# Install Docker if not present
-if ! command -v docker &> /dev/null; then
-    print_status "Installing Docker..."
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-    apt update
-    apt install -y docker-ce docker-ce-cli containerd.io
-fi
-
-# Install Docker Compose if not present
-if ! command -v docker-compose &> /dev/null; then
-    print_status "Installing Docker Compose..."
-    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-fi
 
 # Create directories if they don't exist
 print_status "Creating required directories..."
@@ -191,8 +195,8 @@ if grep -q "server_name" nginx.conf && ! grep -q "localhost" nginx.conf; then
     DOMAIN=$(grep "server_name" nginx.conf | awk '{print $2}' | sed 's/;//')
     if [ "$DOMAIN" != "localhost" ]; then
         print_status "Installing SSL certificate for $DOMAIN..."
-        apt install -y certbot python3-certbot-nginx
-        certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email "admin@$DOMAIN" --redirect
+        sudo apt install -y certbot python3-certbot-nginx
+        sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email "admin@$DOMAIN" --redirect
     fi
 fi
 
