@@ -93,6 +93,12 @@ a:hover {
 .card-header {
     background-color: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary) !important;
+}
+
+.card-header h5 {
+    color: var(--text-primary) !important;
+    margin: 0;
 }
 
 /* Navbar styles */
@@ -200,6 +206,60 @@ a:hover {
     object-fit: contain;
 }
 
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary) !important;
+}
+
+/* Dropdown text colors */
+.dropdown-menu {
+    background-color: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+.dropdown-item {
+    color: var(--text-primary);
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* Toast notification */
+.toast {
+    background-color: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.toast-header {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* Week selector */
+.week-selector .btn-group {
+    gap: 0.25rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    .picks-container {
+        max-width: 100%;
+        overflow-x: auto;
+    }
+    
+    .team-logo-sm {
+        width: 25px;
+        height: 25px;
+    }
+}
+
 /* Fix hover text colors */
 *:hover {
     color: inherit;
@@ -220,33 +280,6 @@ textarea::placeholder {
 input:focus::placeholder,
 textarea:focus::placeholder {
     color: var(--text-secondary) !important;
-}
-
-/* Dropdown text colors */
-.dropdown-menu {
-    background-color: var(--bg-card);
-    border-color: var(--border-color);
-}
-
-.dropdown-item {
-    color: var(--text-primary);
-}
-
-.dropdown-item:hover,
-.dropdown-item:focus {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .team-name {
-        font-size: 0.9rem;
-    }
-    
-    .btn-group {
-        flex-wrap: wrap;
-    }
 }
 
 /* Navigation styles */
@@ -378,20 +411,4 @@ textarea:focus::placeholder {
 
 .pick-container {
     display: inline-block;
-}
-
-/* Toast notification */
-.toast {
-    background-color: var(--bg-card);
-    color: var(--text-primary);
-}
-
-.toast-header {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-}
-
-/* Week selector */
-.week-selector .btn-group {
-    gap: 0.25rem;
 }
