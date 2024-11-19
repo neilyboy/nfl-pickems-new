@@ -39,6 +39,31 @@ generate_secret_key() {
     python3 -c 'import secrets; print(secrets.token_hex(32))'
 }
 
+# Function to check if a port is in use
+check_port() {
+    local port=$1
+    if command -v nc &> /dev/null; then
+        nc -z localhost $port &> /dev/null
+        return $?
+    elif command -v lsof &> /dev/null; then
+        lsof -i :$port &> /dev/null
+        return $?
+    else
+        # Fallback to netstat
+        netstat -tuln 2>/dev/null | grep -q ":$port "
+        return $?
+    fi
+}
+
+# Function to find next available port
+find_available_port() {
+    local port=$1
+    while check_port $port; do
+        port=$((port + 1))
+    done
+    echo $port
+}
+
 # Main installation process
 main() {
     print_status "NFL Pick'em Game Installation"
@@ -63,18 +88,42 @@ main() {
         sed -i.bak "s/generate-a-secure-secret-key-here/$SECRET_KEY/" .env
         rm -f .env.bak
 
+        # Check ports and update if needed
+        NGINX_PORT=8080
+        APP_PORT=8000
+
+        if check_port $NGINX_PORT; then
+            NEW_NGINX_PORT=$(find_available_port $NGINX_PORT)
+            print_warning "Port $NGINX_PORT is in use, using port $NEW_NGINX_PORT instead"
+            NGINX_PORT=$NEW_NGINX_PORT
+        fi
+
+        if check_port $APP_PORT; then
+            NEW_APP_PORT=$(find_available_port $APP_PORT)
+            print_warning "Port $APP_PORT is in use, using port $NEW_APP_PORT instead"
+            APP_PORT=$NEW_APP_PORT
+        fi
+
+        # Update ports in .env
+        sed -i.bak "s/^NGINX_PORT=.*/NGINX_PORT=$NGINX_PORT/" .env
+        sed -i.bak "s/^APP_PORT=.*/APP_PORT=$APP_PORT/" .env
+        rm -f .env.bak
+
         print_warning "Please edit .env file with your preferred settings:"
         echo "  - Set ADMIN_USERNAME and ADMIN_PASSWORD"
-        echo "  - Adjust TIMEZONE if needed"
-        echo "  - Change ports if needed"
+        echo "  - Adjust TIMEZONE if needed (current: US/Eastern)"
+        echo "  - Ports have been automatically configured to:"
+        echo "    NGINX_PORT=$NGINX_PORT"
+        echo "    APP_PORT=$APP_PORT"
         
-        read -p "Press Enter to continue after editing .env..."
+        read -p "Press Enter to continue after editing .env (or Ctrl+C to cancel)..."
     else
         print_warning ".env file already exists, skipping creation..."
     fi
 
     # Start the application
     print_status "Starting NFL Pick'em..."
+    docker compose down 2>/dev/null  # Clean up any existing containers
     docker compose up -d --build
 
     # Wait for the application to start
@@ -87,7 +136,7 @@ main() {
         
         # Get the port from .env file or use default
         NGINX_PORT=$(grep NGINX_PORT .env 2>/dev/null | cut -d= -f2)
-        NGINX_PORT=${NGINX_PORT:-80}  # Default to 80 if not found
+        NGINX_PORT=${NGINX_PORT:-8080}  # Default to 8080 if not found
         
         echo -e "\n${GREEN}Access URLs:${NC}"
         echo "Local: http://localhost:${NGINX_PORT}"
