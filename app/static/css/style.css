@@ -420,6 +420,19 @@ textarea:focus::placeholder {
     justify-content: center;
     margin: 0 1px;
     transition: transform 0.2s ease-in-out;
+    padding: 2px;
+    border: 2px solid transparent;
+    border-radius: 4px;
+}
+
+.team-logo-container.correct {
+    border-color: #198754;
+    box-shadow: 0 0 4px rgba(25, 135, 84, 0.4);
+}
+
+.team-logo-container.incorrect {
+    border-color: #dc3545;
+    box-shadow: 0 0 4px rgba(220, 53, 69, 0.4);
 }
 
 .team-logo-container:hover {
