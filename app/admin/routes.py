@@ -1,8 +1,12 @@
-from flask import render_template, flash, redirect, url_for, request, jsonify, make_response
-from flask_login import login_required, current_user
+from flask import render_template, jsonify, request, current_app
 from app.admin import bp
-from app.extensions import db, csrf
+from flask_login import login_required, current_user
+from app.decorators import admin_required
 from app.services.game_service import GameService
+from app.models.user import User
+from app.models.pick import Pick
+from app.models.game import GameCache
+from app import db
 from functools import wraps
 import logging
 
@@ -23,7 +27,8 @@ def admin_required(f):
 @login_required
 @admin_required
 def index():
-    return render_template('admin/index.html')
+    current_week = GameService.get_current_week()
+    return render_template('admin/index.html', current_week=current_week)
 
 @bp.route('/refresh-games', methods=['GET', 'POST'])
 @login_required

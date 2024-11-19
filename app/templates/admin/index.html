@@ -37,7 +37,7 @@
                         <a href="{{ url_for('main.standings') }}" class="btn btn-info">
                             <i class="fas fa-trophy"></i> View Standings
                         </a>
-                        <a href="{{ url_for('picks.picks') }}" class="btn btn-secondary">
+                        <a href="{{ url_for('picks.picks', user_id=current_user.id, week=current_week) }}" class="btn btn-secondary">
                             <i class="fas fa-check-square"></i> Make Picks
                         </a>
                     </div>
