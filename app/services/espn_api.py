@@ -209,27 +209,35 @@ class ESPNApiService:
                     if not date_str.endswith('Z') and not '+' in date_str and not '-' in date_str:
                         date_str += 'Z'
                     game_date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                    
+                    # Convert to Central Time for MNF detection
+                    local_tz = tz.gettz('America/Chicago')
+                    local_date = game_date.astimezone(local_tz)
                 else:
                     game_date = datetime.now(tz=tz.tzutc())
+                    local_date = game_date.astimezone(tz.gettz('America/Chicago'))
 
                 # If the game date is more than 6 months in the future, it's probably a next season game
                 # Adjust the year to the current year
                 if (game_date - datetime.now(tz=tz.tzutc())).days > 180:
                     current_year = datetime.now().year
                     game_date = game_date.replace(year=current_year)
+                    local_date = local_date.replace(year=current_year)
             
-                is_monday = game_date.weekday() == 0  # Monday is 0
+                is_monday = local_date.weekday() == 0  # Monday is 0
                 is_mnf = is_monday and ('Monday Night Football' in event.get('name', '') or 
                                       'Monday Night' in event.get('name', '') or
-                                      game_date.hour >= 19)  # 7 PM or later
+                                      local_date.hour >= 19)  # 7 PM CT or later
             
                 # Debug logging for MNF detection
                 logger.info(f"Game: {event.get('name', '')}")
-                logger.info(f"Date: {game_date}, Is Monday: {is_monday}, Hour: {game_date.hour}")
+                logger.info(f"UTC Date: {game_date}, Local Date: {local_date}")
+                logger.info(f"Is Monday: {is_monday}, Local Hour: {local_date.hour}")
                 logger.info(f"Is MNF: {is_mnf}")
             except (ValueError, TypeError) as e:
                 logger.error(f"Error parsing game date: {e}")
                 game_date = datetime.now(tz=tz.tzutc())
+                local_date = game_date.astimezone(tz.gettz('America/Chicago'))
                 is_mnf = False
         
             game_data = {
@@ -258,7 +266,7 @@ class ESPNApiService:
                     'state': venue.get('address', {}).get('state', '')
                 },
                 'is_mnf': is_mnf,
-                'game_time': game_date.strftime('%I:%M %p')
+                'game_time': local_date.strftime('%I:%M %p')
             }
             
             return game_data

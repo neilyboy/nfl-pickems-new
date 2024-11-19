@@ -9,6 +9,7 @@ from app.services.game_service import GameService
 from app.extensions import db
 from app.data.nfl_teams import NFL_TEAMS
 import logging
+import pytz
 logger = logging.getLogger(__name__)
 
 @bp.route('/picks/<int:week>')
@@ -66,15 +67,17 @@ def picks(week, user_id=None):
                 away_score = game['away_score']
                 home_score = game['home_score']
             
-            # Parse game date - always convert to UTC
+            # Parse game date - convert from UTC to local timezone
             game_date = datetime.fromisoformat(game['date'].replace('Z', '+00:00'))
-            game_time = game_date.strftime('%I:%M %p')
+            local_tz = pytz.timezone('America/Chicago')  # Central Time
+            local_date = game_date.astimezone(local_tz)
+            game_time = local_date.strftime('%I:%M %p')
             
             # Use the API's is_mnf flag if available, otherwise detect based on game time
             is_mnf = game.get('is_mnf', False)
-            if not is_mnf and game_date.weekday() == 0:  # Monday is 0
-                game_hour = game_date.hour
-                is_mnf = game_hour >= 19 or game_hour < 4  # 7 PM to 4 AM UTC
+            if not is_mnf and local_date.weekday() == 0:  # Monday is 0
+                game_hour = local_date.hour
+                is_mnf = game_hour >= 19 or game_hour < 4  # 7 PM to 4 AM CT
             
             transformed_game = {
                 'id': game.get('game_id', game.get('id')),
@@ -94,7 +97,7 @@ def picks(week, user_id=None):
             if transformed_game['is_mnf']:
                 mnf_games.append(transformed_game)
                 logger.info(f"Found MNF game: {away_team} @ {home_team}")
-                logger.info(f"Game details: status={game.get('status')}, time={game_time}, date={game_date}")
+                logger.info(f"Game details: status={game.get('status')}, time={game_time}, date={local_date}")
             
             # Debug logging for each game
             logger.info(f"Game {transformed_game['id']}: {away_team} @ {home_team}")
