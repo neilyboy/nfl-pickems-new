@@ -251,7 +251,19 @@ class GameService:
                 if cached_games:
                     logger.info(f"Found {len(cached_games)} cached games for week {week}")
                     # Convert to dictionary format
-                    return [json.loads(game.data) for game in cached_games]
+                    games = []
+                    for game in cached_games:
+                        try:
+                            game_data = json.loads(game.data)
+                            # Add game time if not present
+                            if 'date' in game_data and 'game_time' not in game_data:
+                                game_date = datetime.fromisoformat(game_data['date'].replace('Z', '+00:00'))
+                                game_data['game_time'] = game_date.strftime('%I:%M %p')
+                            games.append(game_data)
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Error decoding game data: {e}")
+                            continue
+                    return games
             
             # Fetch fresh data from ESPN
             logger.info(f"Fetching fresh game data from ESPN for week {week}")

@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
 {% block title %}
-    {% if user != current_user %}
-        Make Picks for {{ user.username }} - Week {{ week }}
+    {% if target_user != current_user %}
+        Make Picks for {{ target_user.username }} - Week {{ week }}
     {% else %}
         Week {{ week }} Picks
     {% endif %}
@@ -16,12 +16,12 @@
                 <h4 class="mb-0">Week {{ week }} Picks</h4>
                 <div class="btn-group">
                     {% if week > 1 %}
-                        <a href="{{ url_for('picks.picks', week=week-1, user_id=user.id if user != current_user else None) }}" class="btn btn-outline-primary">
+                        <a href="{{ url_for('picks.picks', week=week-1, user_id=target_user.id if target_user != current_user else None) }}" class="btn btn-outline-primary">
                             <i class="fas fa-chevron-left"></i> Week {{ week-1 }}
                         </a>
                     {% endif %}
                     {% if week < 18 %}
-                        <a href="{{ url_for('picks.picks', week=week+1, user_id=user.id if user != current_user else None) }}" class="btn btn-outline-primary">
+                        <a href="{{ url_for('picks.picks', week=week+1, user_id=target_user.id if target_user != current_user else None) }}" class="btn btn-outline-primary">
                             Week {{ week+1 }} <i class="fas fa-chevron-right"></i>
                         </a>
                     {% endif %}
@@ -34,13 +34,13 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="btn-group">
                         {% if week > 1 %}
-                        <a href="{{ url_for('picks.picks', week=week-1, user_id=user.id if user != current_user else None) }}" class="btn btn-primary">
+                        <a href="{{ url_for('picks.picks', week=week-1, user_id=target_user.id if target_user != current_user else None) }}" class="btn btn-primary">
                             <i class="fas fa-chevron-left"></i> Week {{ week-1 }}
                         </a>
                         {% endif %}
                         <span class="btn btn-secondary">Week {{ week }}</span>
                         {% if week < 18 %}
-                        <a href="{{ url_for('picks.picks', week=week+1, user_id=user.id if user != current_user else None) }}" class="btn btn-primary">
+                        <a href="{{ url_for('picks.picks', week=week+1, user_id=target_user.id if target_user != current_user else None) }}" class="btn btn-primary">
                             Week {{ week+1 }} <i class="fas fa-chevron-right"></i>
                         </a>
                         {% endif %}
@@ -48,13 +48,17 @@
                     
                     {% if current_user.is_admin %}
                     <div class="ms-3">
-                        <div class="dropdown mb-4">
+                        <div class="dropdown mb-3">
                             <button class="btn btn-secondary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                {{ user.username }}'s Picks
+                                {% if target_user == current_user %}
+                                Select User's Picks
+                                {% else %}
+                                {{ target_user.username }}'s Picks
+                                {% endif %}
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="userDropdown">
                                 {% for u in users %}
-                                <li><a class="dropdown-item {% if u.id == user.id %}active{% endif %}" 
+                                <li><a class="dropdown-item {% if u.id == target_user.id %}active{% endif %}" 
                                       href="{{ url_for('picks.picks', week=week, user_id=u.id) }}">{{ u.username }}'s Picks</a></li>
                                 {% endfor %}
                             </ul>
@@ -66,8 +70,8 @@
 
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    {% if user != current_user %}
-                        <h4 class="mb-0">Make Picks for {{ user.username }} - Week {{ week }}</h4>
+                    {% if target_user != current_user %}
+                        <h4 class="mb-0">Make Picks for {{ target_user.username }} - Week {{ week }}</h4>
                         <div>
                             <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> Back to Users
@@ -78,7 +82,7 @@
                     {% endif %}
                 </div>
                 <div class="card-body">
-                    <form id="picks-form" method="POST" action="{{ url_for('picks.submit_picks', week=week, user_id=user.id if user != current_user else None) }}">
+                    <form id="picks-form" method="POST" action="{{ url_for('picks.submit_picks', week=week, user_id=target_user.id if target_user != current_user else None) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         
                         {% if games %}
@@ -151,19 +155,22 @@
                                     <h6 class="mb-3">Monday Night Games:</h6>
                                     {% for game in mnf_games %}
                                     <div class="d-flex align-items-center mb-2">
-                                        <img src="{{ nfl_teams[game.away_team_abbrev.upper()].logo }}" 
-                                             alt="{{ nfl_teams[game.away_team_abbrev.upper()].name }}" 
+                                        {% set away_team = nfl_teams.get(game['away_team_abbrev'].upper(), {'name': game['away_team_abbrev'], 'logo': '/static/img/teams/default.png'}) %}
+                                        {% set home_team = nfl_teams.get(game['home_team_abbrev'].upper(), {'name': game['home_team_abbrev'], 'logo': '/static/img/teams/default.png'}) %}
+                                        <img src="{{ away_team['logo'] }}" 
+                                             alt="{{ away_team['name'] }}" 
                                              class="team-logo me-2" 
                                              width="24" 
                                              height="24">
-                                        <span class="team-name">{{ nfl_teams[game.away_team_abbrev.upper()].name }}</span>
+                                        <span class="team-name">{{ away_team['name'] }}</span>
                                         <span class="mx-2">@</span>
-                                        <img src="{{ nfl_teams[game.home_team_abbrev.upper()].logo }}" 
-                                             alt="{{ nfl_teams[game.home_team_abbrev.upper()].name }}" 
+                                        <img src="{{ home_team['logo'] }}" 
+                                             alt="{{ home_team['name'] }}" 
                                              class="team-logo me-2" 
                                              width="24" 
                                              height="24">
-                                        <span class="team-name">{{ nfl_teams[game.home_team_abbrev.upper()].name }}</span>
+                                        <span class="team-name">{{ home_team['name'] }}</span>
+                                        <span class="game-time ms-2 text-muted">({{ game['game_time'] }})</span>
                                     </div>
                                     {% endfor %}
                                 </div>
@@ -176,7 +183,15 @@
                                            value="{{ mnf_prediction.total_points if mnf_prediction else '' }}"
                                            min="0"
                                            max="200"
-                                           {% if mnf_games|length == 0 and not current_user.is_admin %}disabled{% endif %}
+                                           {% if not current_user.is_admin %}
+                                           {% set any_mnf_started = false %}
+                                           {% for game in mnf_games %}
+                                           {% if game['game_status'] != 'STATUS_SCHEDULED' %}
+                                           {% set any_mnf_started = true %}
+                                           {% endif %}
+                                           {% endfor %}
+                                           {% if any_mnf_started %}disabled{% endif %}
+                                           {% endif %}
                                            required>
                                     <small class="form-text text-muted">Enter your prediction for the total combined score of all Monday Night Football games (0-200).</small>
                                 </div>
