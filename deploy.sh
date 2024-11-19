@@ -19,52 +19,12 @@ print_error() {
     echo -e "${RED}[x]${NC} $1"
 }
 
-# Function to check if a port is available
-check_port() {
-    local port=$1
-    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null ; then
-        return 1
-    else
-        return 0
-    fi
-}
+# Check if running on Ubuntu
+if ! grep -q "Ubuntu" /etc/os-release; then
+    print_warning "This script is designed for Ubuntu. Your mileage may vary on other distributions."
+fi
 
-# Function to get valid port
-get_valid_port() {
-    local default_port=$1
-    local port_type=$2
-    local port
-
-    while true; do
-        read -p "Enter $port_type port (default: $default_port): " port
-        port=${port:-$default_port}
-
-        if ! [[ "$port" =~ ^[0-9]+$ ]]; then
-            print_error "Please enter a valid port number"
-            continue
-        fi
-
-        if [ "$port" -lt 1024 ] && [ "$EUID" -ne 0 ]; then
-            print_error "Ports below 1024 require root privileges"
-            continue
-        fi
-
-        if ! check_port "$port"; then
-            print_warning "Port $port is already in use"
-            read -p "Would you like to try a different port? (y/n): " try_again
-            if [[ "$try_again" =~ ^[Yy]$ ]]; then
-                continue
-            fi
-            print_error "Please free up port $port and try again"
-            exit 1
-        fi
-
-        break
-    done
-    echo "$port"
-}
-
-# Function to install system dependencies
+# Install system dependencies if needed
 install_dependencies() {
     print_status "Installing system dependencies..."
     sudo apt update
@@ -74,7 +34,8 @@ install_dependencies() {
         curl \
         software-properties-common \
         git \
-        lsof
+        lsof \
+        python3-pip
 
     # Install Docker if not present
     if ! command -v docker &> /dev/null; then
@@ -95,57 +56,20 @@ install_dependencies() {
         sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
     fi
+
+    # Install Python dependencies for setup script
+    pip3 install pytz
 }
 
-# Check if running on Ubuntu
-if ! grep -q "Ubuntu" /etc/os-release; then
-    print_warning "This script is designed for Ubuntu. Your mileage may vary on other distributions."
-fi
-
-# Install dependencies if needed
 read -p "Do you need to install/update system dependencies? (y/n): " install_deps
 if [[ "$install_deps" =~ ^[Yy]$ ]]; then
     install_dependencies
 fi
 
-# Get port configurations
-print_status "Configuring ports..."
-NGINX_PORT=$(get_valid_port 8080 "nginx")
-APP_PORT=$(get_valid_port 8000 "application")
-
-# Update docker-compose.yml with new ports
-print_status "Updating docker-compose configuration..."
-sed -i.bak "s/- \"80:80\"/- \"$NGINX_PORT:80\"/" docker-compose.yml
-sed -i.bak "s/- \"8000:8000\"/- \"$APP_PORT:8000\"/" docker-compose.yml
-
-# Export current user's UID and GID for Docker
-export UID=$(id -u)
-export GID=$(id -g)
-
-# Create directories if they don't exist
-print_status "Creating required directories..."
-mkdir -p instance backups migrations
-chmod -R 777 instance backups migrations
-
-# Initialize SQLite database file with proper permissions
-print_status "Initializing database file..."
-touch instance/app.db
-chmod 666 instance/app.db
-
-# Check if .env exists
-if [ ! -f .env ]; then
-    print_warning ".env file not found. Creating from .env.example..."
-    if [ -f .env.example ]; then
-        cp .env.example .env
-        # Update DATABASE_URL in .env
-        echo "DATABASE_URL=sqlite:///$(pwd)/instance/app.db" >> .env
-        print_status "Please edit .env with your production settings"
-        print_warning "Press Enter when ready to continue..."
-        read
-    else
-        print_error ".env.example not found. Please create .env file manually."
-        exit 1
-    fi
+# Run setup script if .env doesn't exist or user wants to reconfigure
+if [ ! -f .env ] || [[ "$1" == "--reconfigure" ]]; then
+    print_status "Running setup script..."
+    python3 setup.py
 fi
 
 # Stop any running containers
@@ -171,7 +95,7 @@ else
     print_status "Pulling latest changes..."
     # Stash any local changes
     git stash || true
-    git pull https://github.com/neilyboy/nfl-pickems.git main || {
+    git pull origin main || {
         print_error "Failed to pull latest changes. Please ensure you have the correct repository URL."
         exit 1
     }
@@ -179,53 +103,16 @@ else
     git stash pop || true
 fi
 
+# Create required directories
+print_status "Creating required directories..."
+mkdir -p instance migrations
+chmod -R 777 instance migrations
+
 # Build and start containers
 print_status "Building and starting containers..."
 docker compose up -d --build
 
-# Wait for web container to be ready
-print_status "Waiting for web container to be ready..."
-sleep 10
-
-# Initialize database if needed
-print_status "Initializing database..."
-if [ ! -f migrations/alembic.ini ]; then
-    print_status "First time setup: Initializing migrations..."
-    docker compose exec -T web flask db init
-fi
-
-# Run database migrations
-print_status "Running database migrations..."
-if ! docker compose exec -T web flask db migrate -m "Initial migration"; then
-    print_error "Database migration generation failed!"
-    docker compose logs web
-    exit 1
-fi
-
-if ! docker compose exec -T web flask db upgrade; then
-    print_error "Database migration failed!"
-    docker compose logs web
-    exit 1
-fi
-
-# Create admin user if it doesn't exist
-print_status "Checking admin user..."
-if ! docker compose exec -T web python create_admin.py; then
-    print_error "Admin user creation failed!"
-    exit 1
-fi
-
-# Install SSL certificate if domain is configured
-if grep -q "server_name" nginx.conf && ! grep -q "localhost" nginx.conf; then
-    DOMAIN=$(grep "server_name" nginx.conf | awk '{print $2}' | sed 's/;//')
-    if [ "$DOMAIN" != "localhost" ]; then
-        print_status "Installing SSL certificate for $DOMAIN..."
-        sudo apt install -y certbot python3-certbot-nginx
-        sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email "admin@$DOMAIN" --redirect
-    fi
-fi
-
-# Check if containers are running
+# Print status and instructions
 if docker compose ps | grep -q "Up"; then
     print_status "Deployment successful!"
     echo -e "\n${GREEN}Application Status:${NC}"
@@ -233,24 +120,20 @@ if docker compose ps | grep -q "Up"; then
     
     # Get the public IP
     PUBLIC_IP=$(curl -s ifconfig.me)
-    echo -e "\n${GREEN}Access URLs:${NC}"
-    echo "Local: http://localhost:$NGINX_PORT"
-    echo "Public: http://$PUBLIC_IP:$NGINX_PORT"
     
-    if [ "$DOMAIN" != "localhost" ] && [ ! -z "$DOMAIN" ]; then
-        echo "Domain: https://$DOMAIN"
-    fi
+    # Get ports from .env file
+    NGINX_PORT=$(grep NGINX_PORT .env | cut -d= -f2)
+    NGINX_PORT=${NGINX_PORT:-8080}  # Default to 8080 if not found
+    
+    echo -e "\n${GREEN}Access URLs:${NC}"
+    echo "Local: http://localhost:${NGINX_PORT}"
+    echo "Public: http://${PUBLIC_IP}:${NGINX_PORT}"
     
     echo -e "\n${YELLOW}Useful Commands:${NC}"
     echo "View logs: docker compose logs -f"
     echo "Restart app: docker compose restart"
     echo "Stop app: docker compose down"
-    
-    # Save port configuration
-    echo -e "\n${GREEN}Port Configuration:${NC}"
-    echo "Nginx port: $NGINX_PORT"
-    echo "Application port: $APP_PORT"
-    echo "These settings have been saved to docker-compose.yml"
+    echo "Reconfigure: ./deploy.sh --reconfigure"
 else
     print_error "Deployment failed! Check logs with: docker compose logs"
     exit 1
