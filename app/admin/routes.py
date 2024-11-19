@@ -27,7 +27,7 @@ def admin_required(f):
 @login_required
 @admin_required
 def index():
-    current_week = GameService.get_current_week()
+    current_week = GameService.get_current_nfl_week()
     return render_template('admin/index.html', current_week=current_week)
 
 @bp.route('/refresh-games', methods=['GET', 'POST'])
