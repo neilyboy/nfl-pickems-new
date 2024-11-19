@@ -82,12 +82,18 @@ a:hover {
 .btn-primary:hover {
     background-color: var(--primary-dark);
     border-color: var(--primary-dark);
+    color: var(--text-primary) !important;
 }
 
 /* Card styles */
 .card {
     background-color: var(--bg-card);
     border: 1px solid var(--border-color);
+    color: var(--text-primary) !important;
+}
+
+.card:hover {
+    color: var(--text-primary) !important;
 }
 
 .card-header {
@@ -96,9 +102,33 @@ a:hover {
     color: var(--text-primary) !important;
 }
 
+.card-header:hover {
+    color: var(--text-primary) !important;
+}
+
 .card-header h5 {
     color: var(--text-primary) !important;
     margin: 0;
+}
+
+.card-body {
+    color: var(--text-primary) !important;
+}
+
+.card-body:hover {
+    color: var(--text-primary) !important;
+}
+
+.card-text {
+    color: var(--text-primary) !important;
+}
+
+.card-text:hover {
+    color: var(--text-primary) !important;
+}
+
+.card *, .card *:hover {
+    color: var(--text-primary) !important;
 }
 
 /* Navbar styles */
@@ -211,6 +241,27 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--text-primary) !important;
 }
 
+/* Form labels and text */
+label, .form-label, .form-text {
+    color: var(--text-primary) !important;
+}
+
+/* Modal styles */
+.modal-content {
+    background-color: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.modal-header {
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-footer {
+    background-color: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+}
+
 /* Dropdown text colors */
 .dropdown-menu {
     background-color: var(--bg-card);
@@ -241,6 +292,16 @@ h1, h2, h3, h4, h5, h6 {
 /* Week selector */
 .week-selector .btn-group {
     gap: 0.25rem;
+}
+
+/* System status */
+#status-message {
+    color: var(--text-primary);
+}
+
+/* Custom text colors */
+.text-dark {
+    color: var(--text-primary) !important;
 }
 
 /* Responsive adjustments */
