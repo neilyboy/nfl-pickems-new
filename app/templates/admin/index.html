@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - NFL Pick'em{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Admin Dashboard</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Game Management</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Update games from ESPN API and manage pick results.</p>
+                    <div id="status-message" class="alert" style="display: none;"></div>
+                    <div class="d-grid gap-2">
+                        <button onclick="updateGames()" class="btn btn-primary" id="update-games-btn">
+                            <i class="fas fa-sync"></i> Refresh Games
+                        </button>
+                        <button onclick="updatePicks()" class="btn btn-success" id="update-picks-btn">
+                            <i class="fas fa-check-double"></i> Update Pick Results
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Quick Links</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('main.standings') }}" class="btn btn-info">
+                            <i class="fas fa-trophy"></i> View Standings
+                        </a>
+                        <a href="{{ url_for('main.make_picks') }}" class="btn btn-secondary">
+                            <i class="fas fa-check-square"></i> Make Picks
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">System Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><i class="fas fa-user"></i> <strong>Admin:</strong> {{ current_user.username }}</p>
+                            <p><i class="fas fa-clock"></i> <strong>Last Login:</strong> 
+                                {% if current_user.last_login %}
+                                    {{ current_user.last_login.strftime('%Y-%m-%d %H:%M:%S') }}
+                                {% else %}
+                                    Never
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><i class="fas fa-database"></i> <strong>Database Status:</strong> Connected</p>
+                            <p><i class="fas fa-sync"></i> <strong>Last Update:</strong> <span id="last-update">-</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showMessage(message, isError = false) {
+    const statusDiv = document.getElementById('status-message');
+    statusDiv.textContent = message;
+    statusDiv.className = `alert ${isError ? 'alert-danger' : 'alert-success'}`;
+    statusDiv.style.display = 'block';
+    
+    // Update last update time
+    const now = new Date();
+    document.getElementById('last-update').textContent = now.toLocaleString();
+    
+    setTimeout(() => {
+        statusDiv.style.display = 'none';
+    }, 5000);
+}
+
+function setButtonLoading(buttonId, loading) {
+    const button = document.getElementById(buttonId);
+    if (loading) {
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
+    } else {
+        button.disabled = false;
+        button.innerHTML = buttonId === 'update-games-btn' ? 
+            '<i class="fas fa-sync"></i> Refresh Games' : 
+            '<i class="fas fa-check-double"></i> Update Pick Results';
+    }
+}
+
+async function handleResponse(response) {
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+    const contentType = response.headers.get('content-type');
+    console.log('Content type:', contentType);
+    
+    // Try to get the response text first
+    const text = await response.text();
+    console.log('Response text:', text);
+    
+    try {
+        const data = JSON.parse(text);
+        if (!response.ok) {
+            throw new Error(data.error || 'Unknown error occurred');
+        }
+        return data;
+    } catch (e) {
+        console.error('JSON parse error:', e);
+        throw new Error('Failed to parse response: ' + text.substring(0, 100));
+    }
+}
+
+async function makeRequest(url) {
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        credentials: 'same-origin'
+    });
+    return handleResponse(response);
+}
+
+async function updateGames() {
+    setButtonLoading('update-games-btn', true);
+    try {
+        const data = await makeRequest('/admin/refresh-games');
+        showMessage(data.message);
+        setTimeout(() => location.reload(), 2000);
+    } catch (error) {
+        console.error('Error:', error);
+        showMessage(error.message, true);
+    } finally {
+        setButtonLoading('update-games-btn', false);
+    }
+}
+
+async function updatePicks() {
+    setButtonLoading('update-picks-btn', true);
+    try {
+        const data = await makeRequest('/admin/update-picks');
+        showMessage(data.message);
+        setTimeout(() => location.reload(), 2000);
+    } catch (error) {
+        console.error('Error:', error);
+        showMessage(error.message, true);
+    } finally {
+        setButtonLoading('update-picks-btn', false);
+    }
+}
+
+// Initialize last update time if available from localStorage
+document.addEventListener('DOMContentLoaded', () => {
+    const lastUpdate = localStorage.getItem('lastUpdate');
+    if (lastUpdate) {
+        document.getElementById('last-update').textContent = new Date(lastUpdate).toLocaleString();
+    }
+});
+
+// Update localStorage when updates occur
+function updateLastUpdateTime() {
+    const now = new Date();
+    localStorage.setItem('lastUpdate', now.toISOString());
+    document.getElementById('last-update').textContent = now.toLocaleString();
+}
+</script>
+{% endblock %}

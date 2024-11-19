@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Pick Management</h4>
+            <a href="{{ url_for('admin.new_user') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add User
+            </a>
+        </div>
+        <div class="card-body">
+            {% if users %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Avatar</th>
+                            <th>Username</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>
+                                {% if user.avatar_path %}
+                                <img src="{{ user.avatar_path }}" alt="{{ user.username }}'s avatar" 
+                                     class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                                {% else %}
+                                <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" 
+                                     style="width: 40px; height: 40px;">
+                                    <span class="text-white">{{ user.username[0].upper() }}</span>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">{{ user.username }}</td>
+                            <td class="align-middle">
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('picks.picks', user_id=user.id, week=current_week) }}" 
+                                       class="btn btn-success btn-sm">
+                                        <i class="fas fa-check"></i> Make Picks
+                                    </a>
+                                    <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" 
+                                       class="btn btn-primary btn-sm">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                    <a href="{{ url_for('admin.delete_user', user_id=user.id) }}"
+                                       class="btn btn-danger btn-sm"
+                                       onclick="return confirm('Are you sure you want to delete this user?');">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                No users found. Click "Add User" to create one.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

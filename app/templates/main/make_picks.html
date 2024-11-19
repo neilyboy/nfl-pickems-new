@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% block title %}Admin: Enter Picks - Week {{ week }} - NFL Pick'em{% endblock %}
+
+{% block content %}
+<div class="picks-container" x-data="{ 
+    selectedUser: '',
+    picks: {},
+    mnfPoints: '',
+    submitting: false,
+    showConfirmation: false,
+    initPicks() {
+        {% if user_picks %}
+        this.picks = {{ user_picks|tojson }};
+        {% endif %}
+        {% if mnf_prediction %}
+        this.mnfPoints = '{{ mnf_prediction.total_points }}';
+        {% endif %}
+        {% if selected_user %}
+        this.selectedUser = '{{ selected_user }}';
+        {% endif %}
+    },
+    async submitPicks() {
+        if (this.submitting || !this.selectedUser) return;
+        this.submitting = true;
+        
+        try {
+            const response = await fetch('{{ url_for('main.submit_picks') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    week: {{ week }},
+                    user_id: this.selectedUser,
+                    picks: this.picks,
+                    mnf_points: this.mnfPoints ? parseInt(this.mnfPoints) : null
+                })
+            });
+            
+            if (response.ok) {
+                this.showConfirmation = true;
+                setTimeout(() => {
+                    window.location.href = '{{ url_for('main.standings') }}';
+                }, 2000);
+            } else {
+                throw new Error('Failed to submit picks');
+            }
+        } catch (error) {
+            alert('Error submitting picks. Please try again.');
+        } finally {
+            this.submitting = false;
+        }
+    }
+}" x-init="initPicks()">
+    <div class="admin-controls">
+        <div class="control-group">
+            <div class="week-selector">
+                <form method="GET" action="{{ url_for('main.make_picks') }}" class="d-flex align-items-center">
+                    <label for="week" class="me-2">Week:</label>
+                    <select name="week" id="week-select" class="form-select" onchange="this.form.submit()">
+                        {% for w in range(1, 19) %}
+                        <option value="{{ w }}" {% if w == week %}selected{% endif %}>
+                            {{ w }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label for="user-select" class="form-label">Select Player:</label>
+            <select id="user-select" 
+                    class="form-select" 
+                    x-model="selectedUser"
+                    @change="picks = {}; mnfPoints = ''">
+                <option value="">Choose player...</option>
+                {% for user in users %}
+                <option value="{{ user.id }}">{{ user.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+    </div>
+
+    <div class="picks-grid" x-show="selectedUser">
+        {% for game in games %}
+        <div class="game-card">
+            <div class="game-header">
+                <div class="game-time">{{ game.start_time.strftime('%a %I:%M %p') }}</div>
+                {% if game.status == 'STATUS_FINAL' %}
+                <div class="game-winner">Winner: {{ game.winning_team }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="teams-container">
+                <div class="team-button" 
+                     :class="{ 'selected': picks['{{ game.game_id }}'] === '{{ game.away_team }}' }"
+                     @click="picks['{{ game.game_id }}'] = '{{ game.away_team }}'">
+                    <img src="https://a.espncdn.com/i/teamlogos/nfl/500/{{ game.away_team.lower() }}.png" 
+                         alt="{{ game.away_team }}" 
+                         class="team-logo">
+                    <span class="team-name">{{ game.away_team }}</span>
+                </div>
+                
+                <div class="versus">@</div>
+                
+                <div class="team-button"
+                     :class="{ 'selected': picks['{{ game.game_id }}'] === '{{ game.home_team }}' }"
+                     @click="picks['{{ game.game_id }}'] = '{{ game.home_team }}'">
+                    <img src="https://a.espncdn.com/i/teamlogos/nfl/500/{{ game.home_team.lower() }}.png"
+                         alt="{{ game.home_team }}"
+                         class="team-logo">
+                    <span class="team-name">{{ game.home_team }}</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if mnf_games %}
+    <div class="mnf-prediction" x-show="selectedUser">
+        <h3>Monday Night Football Total Points</h3>
+        <div class="mnf-games">
+            {% for game in mnf_games %}
+            <div class="mnf-game">
+                {{ game.away_team }} @ {{ game.home_team }}
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mnf-input">
+            <input type="number" 
+                   x-model="mnfPoints"
+                   min="0"
+                   max="200"
+                   placeholder="Enter total points"
+                   class="form-control">
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="submit-section" x-show="selectedUser">
+        <button class="btn btn-primary submit-picks" 
+                @click="submitPicks()"
+                :disabled="submitting || !selectedUser">
+            <span x-show="!submitting">Save Picks</span>
+            <span x-show="submitting">Saving...</span>
+        </button>
+    </div>
+
+    <div class="confirmation-modal" x-show="showConfirmation" x-cloak>
+        <div class="modal-content">
+            <i class="fas fa-check-circle"></i>
+            <p>Picks saved successfully!</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.picks-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+}
+
+.admin-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background-color: var(--bg-card);
+    border-radius: var(--radius-md);
+}
+
+.control-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.picks-grid {
+    display: grid;
+    gap: var(--spacing-md);
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    margin-bottom: var(--spacing-xl);
+}
+
+.game-card {
+    background-color: var(--bg-card);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+}
+
+.game-time {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.game-winner {
+    font-size: 0.875rem;
+    color: var(--success);
+    font-weight: 600;
+}
+
+.teams-container {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: var(--spacing-md);
+    align-items: center;
+}
+
+.team-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.team-button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.team-button.selected {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.team-logo {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    transition: transform 0.2s ease;
+}
+
+.team-button:hover .team-logo {
+    transform: scale(1.1);
+}
+
+.team-name {
+    font-weight: 600;
+    text-align: center;
+}
+
+.versus {
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.mnf-prediction {
+    background-color: var(--bg-card);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.mnf-games {
+    margin: var(--spacing-md) 0;
+}
+
+.mnf-game {
+    font-weight: 600;
+    margin-bottom: var(--spacing-xs);
+}
+
+.mnf-input {
+    max-width: 200px;
+}
+
+.submit-section {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--spacing-xl);
+}
+
+.submit-picks {
+    min-width: 200px;
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.confirmation-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: var(--bg-card);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+}
+
+.modal-content i {
+    font-size: 3rem;
+    color: var(--success);
+    margin-bottom: var(--spacing-md);
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .admin-controls {
+        flex-direction: column;
+    }
+    
+    .control-group {
+        width: 100%;
+    }
+    
+    .teams-container {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+    
+    .versus {
+        transform: rotate(90deg);
+        margin: var(--spacing-xs) 0;
+    }
+    
+    .team-button {
+        flex-direction: row;
+        justify-content: flex-start;
+        padding: var(--spacing-sm);
+    }
+    
+    .team-logo {
+        width: 36px;
+        height: 36px;
+    }
+}
+</style>
+{% endblock %}

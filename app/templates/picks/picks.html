@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if user != current_user %}
+        Make Picks for {{ user.username }} - Week {{ week }}
+    {% else %}
+        Week {{ week }} Picks
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card mb-4">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Week {{ week }} Picks</h4>
+                <div class="btn-group">
+                    {% if week > 1 %}
+                        <a href="{{ url_for('picks.picks', week=week-1, user_id=user.id if user != current_user else None) }}" class="btn btn-outline-primary">
+                            <i class="fas fa-chevron-left"></i> Week {{ week-1 }}
+                        </a>
+                    {% endif %}
+                    {% if week < 18 %}
+                        <a href="{{ url_for('picks.picks', week=week+1, user_id=user.id if user != current_user else None) }}" class="btn btn-outline-primary">
+                            Week {{ week+1 }} <i class="fas fa-chevron-right"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Week Navigation -->
+            <div class="week-selector mb-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="btn-group">
+                        {% if week > 1 %}
+                        <a href="{{ url_for('picks.picks', week=week-1, user_id=user.id if user != current_user else None) }}" class="btn btn-primary">
+                            <i class="fas fa-chevron-left"></i> Week {{ week-1 }}
+                        </a>
+                        {% endif %}
+                        <span class="btn btn-secondary">Week {{ week }}</span>
+                        {% if week < 18 %}
+                        <a href="{{ url_for('picks.picks', week=week+1, user_id=user.id if user != current_user else None) }}" class="btn btn-primary">
+                            Week {{ week+1 }} <i class="fas fa-chevron-right"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                    
+                    {% if current_user.is_admin %}
+                    <div class="ms-3">
+                        <div class="dropdown mb-4">
+                            <button class="btn btn-secondary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                {{ user.username }}'s Picks
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                                {% for u in users %}
+                                <li><a class="dropdown-item {% if u.id == user.id %}active{% endif %}" 
+                                      href="{{ url_for('picks.picks', week=week, user_id=u.id) }}">{{ u.username }}'s Picks</a></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    {% if user != current_user %}
+                        <h4 class="mb-0">Make Picks for {{ user.username }} - Week {{ week }}</h4>
+                        <div>
+                            <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Users
+                            </a>
+                        </div>
+                    {% else %}
+                        <h4 class="mb-0">Week {{ week }} Picks</h4>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <form id="picks-form" method="POST" action="{{ url_for('picks.submit_picks', week=week, user_id=user.id if user != current_user else None) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        {% if games %}
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                            {% for game in games %}
+                            <div class="col">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="badge {% if game['game_status'] == 'STATUS_FINAL' %}bg-secondary{% elif game['game_status'] == 'STATUS_IN_PROGRESS' %}bg-primary{% else %}bg-info{% endif %}">
+                                                {{ game['game_status'].replace('STATUS_', '') | title }}
+                                            </span>
+                                            <small>{{ game['game_time'] }}</small>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Away Team -->
+                                        <div class="d-flex align-items-center mb-3">
+                                            {% set away_team = nfl_teams.get(game['away_team_abbrev'], {'name': game['away_team_abbrev'], 'logo': '/static/img/teams/default.png'}) %}
+                                            <img src="{{ away_team['logo'] }}" alt="{{ game['away_team_abbrev'] }}" class="team-logo me-2" style="width: 40px;">
+                                            <div>
+                                                <h6 class="mb-0">{{ away_team['name'] }}</h6>
+                                                <small class="text-muted">{{ game['away_team_abbrev'] }}</small>
+                                            </div>
+                                            <div class="ms-auto">
+                                                <span class="badge bg-light text-dark">{{ game['away_team_score'] if game['away_team_score'] is not none else '-' }}</span>
+                                            </div>
+                                        </div>
+                                        <!-- Home Team -->
+                                        <div class="d-flex align-items-center">
+                                            {% set home_team = nfl_teams.get(game['home_team_abbrev'], {'name': game['home_team_abbrev'], 'logo': '/static/img/teams/default.png'}) %}
+                                            <img src="{{ home_team['logo'] }}" alt="{{ game['home_team_abbrev'] }}" class="team-logo me-2" style="width: 40px;">
+                                            <div>
+                                                <h6 class="mb-0">{{ home_team['name'] }}</h6>
+                                                <small class="text-muted">{{ game['home_team_abbrev'] }}</small>
+                                            </div>
+                                            <div class="ms-auto">
+                                                <span class="badge bg-light text-dark">{{ game['home_team_score'] if game['home_team_score'] is not none else '-' }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer">
+                                        <div class="btn-group w-100" role="group" aria-label="Pick for {{ game['away_team_abbrev'] }} vs {{ game['home_team_abbrev'] }}">
+                                            <input type="radio" class="btn-check" name="pick_{{ game['id'] }}" id="pick_{{ game['id'] }}_away" value="{{ game['away_team_abbrev'] }}"
+                                                {% if user_picks.get(game['id']) == game['away_team_abbrev'] %}checked{% endif %}
+                                                {% if game['game_status'] != 'STATUS_SCHEDULED' and not current_user.is_admin %}disabled{% endif %}>
+                                            <label class="btn btn-outline-primary" for="pick_{{ game['id'] }}_away">{{ game['away_team_abbrev'] }}</label>
+
+                                            <input type="radio" class="btn-check" name="pick_{{ game['id'] }}" id="pick_{{ game['id'] }}_home" value="{{ game['home_team_abbrev'] }}"
+                                                {% if user_picks.get(game['id']) == game['home_team_abbrev'] %}checked{% endif %}
+                                                {% if game['game_status'] != 'STATUS_SCHEDULED' and not current_user.is_admin %}disabled{% endif %}>
+                                            <label class="btn btn-outline-primary" for="pick_{{ game['id'] }}_home">{{ game['home_team_abbrev'] }}</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                            <div class="alert alert-info">No games scheduled for this week.</div>
+                        {% endif %}
+
+                        {% if mnf_games %}
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Monday Night Football Score Prediction</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mnf-games mb-4">
+                                    <h6 class="mb-3">Monday Night Games:</h6>
+                                    {% for game in mnf_games %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <img src="{{ nfl_teams[game.away_team_abbrev.upper()].logo }}" 
+                                             alt="{{ nfl_teams[game.away_team_abbrev.upper()].name }}" 
+                                             class="team-logo me-2" 
+                                             width="24" 
+                                             height="24">
+                                        <span class="team-name">{{ nfl_teams[game.away_team_abbrev.upper()].name }}</span>
+                                        <span class="mx-2">@</span>
+                                        <img src="{{ nfl_teams[game.home_team_abbrev.upper()].logo }}" 
+                                             alt="{{ nfl_teams[game.home_team_abbrev.upper()].name }}" 
+                                             class="team-logo me-2" 
+                                             width="24" 
+                                             height="24">
+                                        <span class="team-name">{{ nfl_teams[game.home_team_abbrev.upper()].name }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="form-group">
+                                    <label for="mnf_total_points">Total Combined Points for All Monday Night Football games:</label>
+                                    <input type="number" 
+                                           class="form-control" 
+                                           id="mnf_total_points" 
+                                           name="mnf_total_points" 
+                                           value="{{ mnf_prediction.total_points if mnf_prediction else '' }}"
+                                           min="0"
+                                           max="200"
+                                           {% if mnf_games|length == 0 and not current_user.is_admin %}disabled{% endif %}
+                                           required>
+                                    <small class="form-text text-muted">Enter your prediction for the total combined score of all Monday Night Football games (0-200).</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Picks
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="pickToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto">Pick Saved</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                Your pick has been saved successfully.
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('picks-form');
+    const toast = new bootstrap.Toast(document.getElementById('pickToast'));
+    
+    if (form) {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            try {
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    body: new FormData(this),
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (response.ok) {
+                    toast.show();
+                } else {
+                    alert('Failed to save picks. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while saving picks.');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

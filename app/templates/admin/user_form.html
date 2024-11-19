@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}
+{% if user %}Edit User - {{ user.username }}{% else %}Add New User{% endif %} - NFL Pick'em
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h4>
+                        {% if user %}
+                        Edit User: {{ user.username }}
+                        {% else %}
+                        Add New User
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data" 
+                          action="{{ url_for('admin.edit_user', user_id=user.id) if user else url_for('admin.new_user') }}">
+                        {{ form.csrf_token }}
+                        
+                        <!-- Username -->
+                        <div class="form-group mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username"
+                                   value="{{ user.username if user else '' }}" required>
+                            <small class="form-text text-muted">
+                                Enter the name of the person you'll be making picks for.
+                            </small>
+                        </div>
+
+                        <!-- Avatar Upload -->
+                        <div class="form-group mb-3">
+                            <label for="avatar" class="form-label">Avatar</label>
+                            {% if user and user.avatar_path %}
+                            <div class="mt-2">
+                                <p>Current Avatar:</p>
+                                <img src="{{ url_for('static', filename=user.avatar_path) }}"
+                                     alt="Current avatar"
+                                     class="img-thumbnail"
+                                     style="max-width: 150px;">
+                            </div>
+                            {% endif %}
+                            <input type="file" class="form-control" id="avatar" name="avatar"
+                                   accept="image/*">
+                            <small class="form-text text-muted">
+                                Upload a square image (will be resized to 200x200). Leave blank to keep current avatar.
+                            </small>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> 
+                                {% if user %}Save Changes{% else %}Add User{% endif %}
+                            </button>
+                            <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Users
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

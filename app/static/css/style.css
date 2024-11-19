@@ -1,0 +1,152 @@
+/* Dark theme colors */
+:root {
+    --primary: #0496ff;
+    --primary-dark: #0378cc;
+    --secondary: #6c757d;
+    --success: #28a745;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --info: #17a2b8;
+    --light: #f8f9fa;
+    --dark: #1a1d21;
+    --darker: #15171a;
+    
+    --bg-primary: var(--dark);
+    --bg-secondary: var(--darker);
+    --bg-card: #22252a;
+    --text-primary: #ffffff;
+    --text-secondary: #b0b6bc;
+    --border-color: #2d3238;
+}
+
+/* Base styles */
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+/* Card styles */
+.card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+}
+
+.card-header {
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Table styles */
+.table {
+    color: var(--text-primary);
+}
+
+.table > :not(caption) > * > * {
+    background-color: var(--bg-card);
+    border-bottom-color: var(--border-color);
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* Form controls */
+.form-control, .form-select {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--bg-secondary);
+    border-color: var(--primary);
+    color: var(--text-primary);
+}
+
+/* Button styles */
+.btn-check:checked + .btn-outline-primary {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.btn-outline-primary {
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+/* Team styles */
+.team-info {
+    width: 100%;
+}
+
+.team-name {
+    font-weight: 500;
+}
+
+/* Week selector */
+.week-selector .btn-group {
+    gap: 0.25rem;
+}
+
+/* Toast notification */
+.toast {
+    background-color: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.toast-header {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .team-name {
+        font-size: 0.9rem;
+    }
+    
+    .btn-group {
+        flex-wrap: wrap;
+    }
+}
+
+/* Navigation styles */
+.navbar {
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.nav-link {
+    color: var(--text-secondary);
+}
+
+.nav-link:hover {
+    color: var(--text-primary);
+}
+
+.navbar-brand {
+    color: var(--text-primary);
+}
+
+/* Alert styles */
+.alert {
+    border: 1px solid var(--border-color);
+}
+
+.alert-info {
+    background-color: rgba(23, 162, 184, 0.1);
+    color: var(--text-primary);
+}
+
+/* Badge styles */
+.badge {
+    font-weight: 500;
+}

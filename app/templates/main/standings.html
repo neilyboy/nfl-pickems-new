@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Week {{ current_week }} Standings</h5>
+                    <div>
+                        {% if current_week > 1 %}
+                        <a href="{{ url_for('main.standings', week=current_week-1) }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-chevron-left"></i> Week {{ current_week-1 }}
+                        </a>
+                        {% endif %}
+                        {% if current_week < 18 %}
+                        <a href="{{ url_for('main.standings', week=current_week+1) }}" class="btn btn-sm btn-outline-primary">
+                            Week {{ current_week+1 }} <i class="fas fa-chevron-right"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>User</th>
+                                    <th>Correct</th>
+                                    <th>Percentage</th>
+                                    <th>MNF Points</th>
+                                    <th>Picks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in standings %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ user.username }}</td>
+                                    <td>{{ user.weekly_correct }}</td>
+                                    <td>{{ "%.1f"|format(user.weekly_percentage) }}%</td>
+                                    <td>{{ user.mnf_prediction if user.mnf_prediction else 'No Pick' }}</td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            {% for pick in user.picks %}
+                                                <div class="pick-container position-relative">
+                                                    {% if pick.team_picked == pick.away_team %}
+                                                        <img src="{{ nfl_teams[pick.away_team_abbrev]['logo'] }}" 
+                                                             alt="{{ pick.away_team }}" 
+                                                             class="team-logo {% if pick.is_correct == True %}correct{% elif pick.is_correct == False %}incorrect{% endif %}"
+                                                             title="{{ pick.away_team }} {% if pick.game_status == 'STATUS_FINAL' %}({{ pick.away_team_score }}){% endif %}">
+                                                    {% else %}
+                                                        <img src="{{ nfl_teams[pick.home_team_abbrev]['logo'] }}" 
+                                                             alt="{{ pick.home_team }}" 
+                                                             class="team-logo {% if pick.is_correct == True %}correct{% elif pick.is_correct == False %}incorrect{% endif %}"
+                                                             title="{{ pick.home_team }} {% if pick.game_status == 'STATUS_FINAL' %}({{ pick.home_team_score }}){% endif %}">
+                                                    {% endif %}
+                                                    {% if pick.is_correct == True %}
+                                                        <span class="position-absolute top-0 end-0 badge bg-success">
+                                                            <i class="fas fa-check"></i>
+                                                        </span>
+                                                    {% elif pick.is_correct == False %}
+                                                        <span class="position-absolute top-0 end-0 badge bg-danger">
+                                                            <i class="fas fa-times"></i>
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Season Standings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>User</th>
+                                    <th>Correct</th>
+                                    <th>Percentage</th>
+                                    <th>Weekly Ranks (Last 5 Weeks)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in season_standings %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ user.username }}</td>
+                                    <td>{{ user.season_correct }}/{{ season_total }}</td>
+                                    <td>{{ "%.1f"|format(user.season_percentage) }}%</td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            {% for rank in user.weekly_ranks %}
+                                                <span class="badge {% if rank == 1 %}bg-success{% elif rank == 2 %}bg-primary{% elif rank == 3 %}bg-warning{% else %}bg-secondary{% endif %}">
+                                                    {{ rank }}
+                                                </span>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.team-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    padding: 2px;
+    border-radius: 4px;
+    background: white;
+    border: 1px solid #dee2e6;
+}
+
+.team-logo.correct {
+    border-color: #28a745;
+    background-color: #d4edda;
+}
+
+.team-logo.incorrect {
+    border-color: #dc3545;
+    background-color: #f8d7da;
+}
+
+.pick-container {
+    position: relative;
+    display: inline-block;
+}
+
+.badge {
+    font-size: 0.7rem;
+}
+
+.table > :not(caption) > * > * {
+    padding: 1rem 0.75rem;
+}
+
+.badge {
+    font-size: 0.8rem;
+    padding: 0.35em 0.65em;
+}
+
+.card {
+    transition: all 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+}
+
+.border-success {
+    border-width: 2px !important;
+}
+
+.border-danger {
+    border-width: 2px !important;
+}
+
+.table-hover > tbody > tr:hover {
+    background-color: rgba(0,0,0,.02);
+}
+
+.team-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    min-width: 60px;
+}
+
+.team-container.picked {
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+}
+
+.team-logo {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+}
+
+.team-abbrev {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 0.25rem;
+}
+
+.score {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.text-success {
+    color: var(--bs-success) !important;
+}
+
+.text-danger {
+    color: var(--bs-danger) !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('standings', () => ({
+        showDetails: {},
+        toggleDetails(userId) {
+            this.showDetails[userId] = !this.showDetails[userId];
+        }
+    }))
+})
+</script>
+{% endblock %}
