@@ -121,7 +121,12 @@ sed -i.bak "s/- \"8000:8000\"/- \"$APP_PORT:8000\"/" docker-compose.yml
 # Create directories if they don't exist
 print_status "Creating required directories..."
 mkdir -p instance backups migrations
-chmod 777 instance backups migrations
+chmod -R 777 instance backups migrations
+
+# Initialize SQLite database file with proper permissions
+print_status "Initializing database file..."
+touch instance/app.db
+chmod 666 instance/app.db
 
 # Check if .env exists
 if [ ! -f .env ]; then
@@ -187,11 +192,13 @@ fi
 print_status "Running database migrations..."
 if ! docker-compose exec -T web flask db migrate -m "Initial migration"; then
     print_error "Database migration generation failed!"
+    docker-compose logs web
     exit 1
 fi
 
 if ! docker-compose exec -T web flask db upgrade; then
     print_error "Database migration failed!"
+    docker-compose logs web
     exit 1
 fi
 
