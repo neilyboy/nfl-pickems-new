@@ -25,20 +25,13 @@ body {
     color: var(--text-primary);
 }
 
-/* Card styles */
-.card {
-    background-color: var(--bg-card);
-    border: 1px solid var(--border-color);
-}
-
-.card-header {
-    background-color: var(--bg-secondary);
-    border-bottom: 1px solid var(--border-color);
-}
-
 /* Table styles */
 .table {
-    color: var(--text-primary);
+    color: var(--text-primary) !important;
+}
+
+.table td, .table th {
+    color: var(--text-primary) !important;
 }
 
 .table > :not(caption) > * > * {
@@ -48,17 +41,21 @@ body {
 
 .table-hover tbody tr:hover {
     background-color: var(--bg-secondary);
+}
+
+.table-hover tbody tr:hover td,
+.table-hover tbody tr:hover th {
     color: var(--text-primary) !important;
 }
 
 /* Link styles */
 a {
-    color: var(--primary);
+    color: var(--text-primary);
     text-decoration: none;
 }
 
 a:hover {
-    color: var(--primary-dark);
+    color: var(--text-primary);
     text-decoration: underline;
 }
 
@@ -87,6 +84,17 @@ a:hover {
     border-color: var(--primary-dark);
 }
 
+/* Card styles */
+.card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+}
+
+.card-header {
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
 /* Navbar styles */
 .navbar {
     background-color: var(--bg-secondary) !important;
@@ -109,29 +117,6 @@ a:hover {
 .alert-danger {
     background-color: rgba(220, 53, 69, 0.2);
     border-color: rgba(220, 53, 69, 0.3);
-    color: var(--text-primary);
-}
-
-/* Fix hover text colors */
-.table-hover tbody tr:hover td,
-.table-hover tbody tr:hover th,
-.table-hover tbody tr:hover a {
-    color: var(--text-primary) !important;
-}
-
-/* Fix dropdown text colors */
-.dropdown-menu {
-    background-color: var(--bg-card);
-    border-color: var(--border-color);
-}
-
-.dropdown-item {
-    color: var(--text-primary);
-}
-
-.dropdown-item:hover,
-.dropdown-item:focus {
-    background-color: var(--bg-secondary);
     color: var(--text-primary);
 }
 
@@ -182,7 +167,6 @@ a:hover {
 /* Standings table */
 .standings-table th {
     background-color: var(--bg-secondary);
-    color: var(--text-primary);
 }
 
 .standings-table td {
@@ -199,7 +183,24 @@ a:hover {
     font-size: 0.875rem;
 }
 
-/* Fix all hover states to maintain light text */
+/* Team styles */
+.team-info {
+    width: 100%;
+}
+
+.team-logo-sm {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+}
+
+.team-logo-lg {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+}
+
+/* Fix hover text colors */
 *:hover {
     color: inherit;
 }
@@ -221,27 +222,18 @@ textarea:focus::placeholder {
     color: var(--text-secondary) !important;
 }
 
-/* Team styles */
-.team-info {
-    width: 100%;
-}
-
-.team-name {
-    font-weight: 500;
-}
-
-/* Week selector */
-.week-selector .btn-group {
-    gap: 0.25rem;
-}
-
-/* Toast notification */
-.toast {
+/* Dropdown text colors */
+.dropdown-menu {
     background-color: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+.dropdown-item {
     color: var(--text-primary);
 }
 
-.toast-header {
+.dropdown-item:hover,
+.dropdown-item:focus {
     background-color: var(--bg-secondary);
     color: var(--text-primary);
 }
@@ -386,4 +378,20 @@ textarea:focus::placeholder {
 
 .pick-container {
     display: inline-block;
+}
+
+/* Toast notification */
+.toast {
+    background-color: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.toast-header {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* Week selector */
+.week-selector .btn-group {
+    gap: 0.25rem;
 }
