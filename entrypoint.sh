@@ -10,6 +10,7 @@ chmod -R 777 /app/instance /app/migrations
 if [ ! -f /app/instance/app.db ]; then
     touch /app/instance/app.db
     chmod 666 /app/instance/app.db
+    export RESET_ADMIN_PASSWORD=true
 fi
 
 # Initialize migrations if they don't exist
@@ -19,12 +20,10 @@ if [ ! -f /app/migrations/alembic.ini ]; then
 fi
 
 # Run migrations
-cd /app
-flask db migrate -m "Initial migration" || true
-flask db upgrade || true
+cd /app && flask db upgrade
 
-# Create admin user if it doesn't exist
-python create_admin.py || true
+# Ensure admin user exists
+cd /app && flask ensure-admin
 
-# Execute the main command
+# Start the application
 exec "$@"

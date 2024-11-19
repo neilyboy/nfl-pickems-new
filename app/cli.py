@@ -100,7 +100,32 @@ def init_sample_games():
     db.session.commit()
     click.echo("Sample games initialized for week 1 of 2024 season")
 
+@click.command('ensure-admin')
+@with_appcontext
+def ensure_admin_command():
+    """Ensure admin user exists and optionally reset password."""
+    from app.models.user import User
+    from app.extensions import db
+    import os
+
+    admin = User.query.filter_by(username='admin').first()
+    if not admin:
+        print('Admin user does not exist. Creating...')
+        admin = User(username='admin', is_admin=True)
+        admin.set_password('admin')
+        db.session.add(admin)
+        db.session.commit()
+        print('Admin user created!')
+    elif os.environ.get('RESET_ADMIN_PASSWORD', '').lower() == 'true':
+        print('Resetting admin password...')
+        admin.set_password('admin')
+        db.session.commit()
+        print('Admin password updated!')
+    else:
+        print('Admin user already exists!')
+
 def init_cli(app):
-    """Register CLI commands"""
+    """Initialize CLI commands."""
     app.cli.add_command(update_games_command)
     app.cli.add_command(init_sample_games)
+    app.cli.add_command(ensure_admin_command)
