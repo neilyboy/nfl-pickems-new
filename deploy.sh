@@ -22,16 +22,70 @@ print_error() {
     echo -e "${RED}[x]${NC} $1"
 }
 
-# Check if running as root
+# Function to check if a port is available
+check_port() {
+    local port=$1
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null ; then
+        return 1
+    else
+        return 0
+    fi
+}
+
+# Function to get valid port
+get_valid_port() {
+    local default_port=$1
+    local port_type=$2
+    local port
+
+    while true; do
+        read -p "Enter $port_type port (default: $default_port): " port
+        port=${port:-$default_port}
+
+        if ! [[ "$port" =~ ^[0-9]+$ ]]; then
+            print_error "Please enter a valid port number"
+            continue
+        fi
+
+        if [ "$port" -lt 1024 ] && [ "$EUID" -ne 0 ]; then
+            print_error "Ports below 1024 require root privileges"
+            continue
+        fi
+
+        if ! check_port "$port"; then
+            print_warning "Port $port is already in use"
+            read -p "Would you like to try a different port? (y/n): " try_again
+            if [[ "$try_again" =~ ^[Yy]$ ]]; then
+                continue
+            fi
+            print_error "Please free up port $port and try again"
+            exit 1
+        fi
+
+        break
+    done
+    echo "$port"
+}
+
+# Check if running as root for low ports
 if [ "$EUID" -ne 0 ]; then
-    print_error "Please run as root (sudo ./deploy.sh)"
-    exit 1
+    print_warning "Not running as root. You won't be able to use ports below 1024."
 fi
 
 # Check if running on Ubuntu
 if ! grep -q "Ubuntu" /etc/os-release; then
     print_warning "This script is designed for Ubuntu. Your mileage may vary on other distributions."
 fi
+
+# Get port configurations
+print_status "Configuring ports..."
+NGINX_PORT=$(get_valid_port 8080 "nginx")
+APP_PORT=$(get_valid_port 8000 "application")
+
+# Update docker-compose.yml with new ports
+print_status "Updating docker-compose configuration..."
+sed -i.bak "s/- \"80:80\"/- \"$NGINX_PORT:80\"/" docker-compose.yml
+sed -i.bak "s/- \"8000:8000\"/- \"$APP_PORT:8000\"/" docker-compose.yml
 
 # Install required packages if not present
 print_status "Checking and installing required packages..."
@@ -41,7 +95,8 @@ apt install -y \
     ca-certificates \
     curl \
     software-properties-common \
-    git
+    git \
+    lsof
 
 # Install Docker if not present
 if ! command -v docker &> /dev/null; then
@@ -150,8 +205,8 @@ if docker-compose ps | grep -q "Up"; then
     # Get the public IP
     PUBLIC_IP=$(curl -s ifconfig.me)
     echo -e "\n${GREEN}Access URLs:${NC}"
-    echo "Local: http://localhost"
-    echo "Public: http://$PUBLIC_IP"
+    echo "Local: http://localhost:$NGINX_PORT"
+    echo "Public: http://$PUBLIC_IP:$NGINX_PORT"
     
     if [ "$DOMAIN" != "localhost" ] && [ ! -z "$DOMAIN" ]; then
         echo "Domain: https://$DOMAIN"
@@ -161,6 +216,12 @@ if docker-compose ps | grep -q "Up"; then
     echo "View logs: docker-compose logs -f"
     echo "Restart app: docker-compose restart"
     echo "Stop app: docker-compose down"
+    
+    # Save port configuration
+    echo -e "\n${GREEN}Port Configuration:${NC}"
+    echo "Nginx port: $NGINX_PORT"
+    echo "Application port: $APP_PORT"
+    echo "These settings have been saved to docker-compose.yml"
 else
     print_error "Deployment failed! Check logs with: docker-compose logs"
     exit 1
