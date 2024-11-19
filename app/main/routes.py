@@ -86,46 +86,61 @@ def standings(week=None):
         user_data = {
             'id': user.id,
             'username': user.username,
-            'weekly_correct': f"{weekly_record['wins']}/{weekly_record['total']}",  # Show finished picks only
+            'weekly_wins': weekly_record['wins'],  # Store raw number for sorting
+            'weekly_correct': f"{weekly_record['wins']}/{weekly_record['total']}",  # For display
             'weekly_percentage': weekly_percentage,
-            'season_correct': f"{season_record['wins']}/{season_record['total']}",  # Show finished picks only
+            'season_wins': season_record['wins'],  # Store raw number for sorting
+            'season_correct': f"{season_record['wins']}/{season_record['total']}",  # For display
             'season_percentage': season_percentage,
             'picks': user_picks,
             'mnf_prediction': mnf_data['prediction'] if mnf_data else None,
-            'mnf_points_off': mnf_data['points_off'] if mnf_data else None
+            'mnf_points_off': mnf_data['points_off'] if mnf_data and mnf_data['points_off'] is not None else None,
+            'mnf_over': mnf_data['points_off'] < 0 if mnf_data and mnf_data['points_off'] is not None else True  # True means prediction was over
         }
         standings_data.append(user_data)
     
-    # Sort standings by weekly wins
-    standings_data.sort(key=lambda x: (x['weekly_correct'], -x.get('mnf_points_off', float('inf')) if x.get('mnf_points_off') is not None else float('inf')), reverse=True)
+    # Sort standings:
+    # 1. Most weekly wins
+    # 2. For ties, closest MNF prediction without going over
+    # 3. If still tied or no MNF prediction, keep original order
+    def sort_key(x):
+        wins = x['weekly_wins']
+        mnf_points_off = x.get('mnf_points_off')
+        mnf_over = x.get('mnf_over', True)
+        
+        # If prediction is over or no prediction, use infinity for sorting
+        if mnf_over or mnf_points_off is None:
+            mnf_points_off = float('inf')
+            
+        return (-wins, mnf_points_off)  # Negative wins for descending order
+        
+    standings_data.sort(key=sort_key)
     
     # Get weekly ranks history for season standings
     season_standings = []
     for user in users:
         season_record = user.get_season_record()
-        total_picks = season_record['wins'] + season_record['losses']
-        season_percentage = (season_record['wins'] / total_picks * 100) if total_picks > 0 else 0
+        season_percentage = (season_record['wins'] / season_record['total'] * 100) if season_record['total'] > 0 else 0
         
-        # Get weekly ranks (last 5 weeks)
+        # Get weekly ranks for sparkline
         weekly_ranks = []
-        for w in range(max(1, selected_week - 4), selected_week + 1):
-            week_standings = []
-            for u in users:
-                week_record = u.get_weekly_record(w)
-                week_standings.append((u.id, week_record['wins']))
-            week_standings.sort(key=lambda x: x[1], reverse=True)
-            user_rank = next(i + 1 for i, (uid, _) in enumerate(week_standings) if uid == user.id)
-            weekly_ranks.append(user_rank)
+        for w in range(1, current_week + 1):
+            week_record = user.get_weekly_record(w)
+            if week_record['total'] > 0:  # Only include weeks with picks
+                weekly_ranks.append(week_record['wins'])
         
-        season_standings.append({
+        user_data = {
+            'id': user.id,
             'username': user.username,
-            'season_correct': season_record['wins'],
+            'season_wins': season_record['wins'],  # Store raw number for sorting
+            'season_correct': f"{season_record['wins']}/{season_record['total']}",
             'season_percentage': season_percentage,
             'weekly_ranks': weekly_ranks
-        })
+        }
+        season_standings.append(user_data)
     
     # Sort season standings by total wins
-    season_standings.sort(key=lambda x: x['season_correct'], reverse=True)
+    season_standings.sort(key=lambda x: (-x['season_wins']))
     
     return render_template('main/standings.html',
                          current_week=selected_week,
