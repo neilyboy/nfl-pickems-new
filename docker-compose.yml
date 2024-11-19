@@ -7,12 +7,14 @@ services:
     volumes:
       - .:/app
       - ./instance:/app/instance
+      - ./migrations:/app/migrations
     ports:
       - "8000:8000"
     environment:
       - FLASK_APP=app
       - FLASK_ENV=production
       - PYTHONPATH=/app
+      - DATABASE_URL=sqlite:////app/instance/app.db
     user: "${UID}:${GID}"
     restart: unless-stopped
     env_file:

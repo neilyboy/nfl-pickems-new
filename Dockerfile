@@ -14,11 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create instance directory with proper permissions
-RUN mkdir -p instance && chmod 777 instance
-
-# Create migrations directory with proper permissions
-RUN mkdir -p migrations && chmod 777 migrations
+# Create necessary directories
+RUN mkdir -p instance migrations && \
+    chmod 777 instance migrations
 
 # Set environment variables
 ENV FLASK_APP=app

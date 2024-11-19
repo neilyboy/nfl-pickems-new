@@ -1,8 +1,10 @@
 #!/bin/sh
+set -e
 
-# Create instance directory if it doesn't exist
-mkdir -p /app/instance
-chmod 777 /app/instance
+# Create necessary directories with proper permissions
+mkdir -p /app/instance /app/migrations
+chown -R $(id -u):$(id -g) /app/instance /app/migrations
+chmod -R 777 /app/instance /app/migrations
 
 # Initialize database if it doesn't exist
 if [ ! -f /app/instance/app.db ]; then
@@ -11,13 +13,18 @@ if [ ! -f /app/instance/app.db ]; then
 fi
 
 # Initialize migrations if they don't exist
-if [ ! -d /app/migrations ]; then
-    flask db init
+if [ ! -f /app/migrations/alembic.ini ]; then
+    cd /app && flask db init
+    chown -R $(id -u):$(id -g) /app/migrations
 fi
 
 # Run migrations
+cd /app
 flask db migrate -m "Initial migration" || true
 flask db upgrade || true
+
+# Create admin user if it doesn't exist
+python create_admin.py || true
 
 # Execute the main command
 exec "$@"
