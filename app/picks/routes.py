@@ -137,10 +137,12 @@ def picks(week, user_id=None):
                          users=all_users,
                          target_user=target_user)
 
-@bp.route('/submit-picks/<int:week>', methods=['POST'])
-@bp.route('/submit-picks/<int:week>/<int:user_id>', methods=['POST'])
+@bp.route('/submit-picks/<int:week>', methods=['GET', 'POST'])
 @login_required
-def submit_picks(week, user_id=None):
+def submit_picks(week):
+    # Get user_id from query parameter
+    user_id = request.args.get('user_id', type=int)
+    
     # Only admins can submit picks for other users
     if user_id and not current_user.is_admin:
         flash('You do not have permission to submit picks for other users.', 'danger')
@@ -148,6 +150,9 @@ def submit_picks(week, user_id=None):
 
     # Get the target user
     target_user = User.query.get(user_id) if user_id else current_user
+
+    if request.method != 'POST':
+        return redirect(url_for('picks.picks', week=week, user_id=user_id))
 
     # Get games for the week
     games = GameService.update_week_games(week=week)
