@@ -47,6 +47,61 @@
     </div>
     
     <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">Database Management</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Backup and restore database functionality.</p>
+                    <div class="d-grid gap-2">
+                        <button onclick="backupDatabase()" class="btn btn-warning" id="backup-db-btn">
+                            <i class="fas fa-download"></i> Backup Database
+                        </button>
+                        <form id="restore-form" class="mt-2">
+                            <div class="input-group">
+                                <input type="file" class="form-control" id="restore-file" accept=".db">
+                                <button onclick="restoreDatabase(event)" class="btn btn-warning" id="restore-db-btn">
+                                    <i class="fas fa-upload"></i> Restore
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">Admin Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form id="change-password-form">
+                        <div class="mb-3">
+                            <label for="current-password" class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="current-password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-password" class="form-label">New Password</label>
+                            <input type="password" class="form-control" id="new-password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirm-password" class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirm-password" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="button" onclick="changePassword()" class="btn btn-danger" id="change-password-btn">
+                                <i class="fas fa-key"></i> Change Password
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
         <div class="col-12">
             <div class="card">
                 <div class="card-header bg-secondary text-white">
@@ -100,7 +155,13 @@ function setButtonLoading(buttonId, loading) {
         button.disabled = false;
         button.innerHTML = buttonId === 'update-games-btn' ? 
             '<i class="fas fa-sync"></i> Refresh Games' : 
-            '<i class="fas fa-check-double"></i> Update Pick Results';
+            buttonId === 'update-picks-btn' ? 
+            '<i class="fas fa-check-double"></i> Update Pick Results' : 
+            buttonId === 'backup-db-btn' ? 
+            '<i class="fas fa-download"></i> Backup Database' : 
+            buttonId === 'restore-db-btn' ? 
+            '<i class="fas fa-upload"></i> Restore' : 
+            '<i class="fas fa-key"></i> Change Password';
     }
 }
 
@@ -165,6 +226,92 @@ async function updatePicks() {
     } finally {
         setButtonLoading('update-picks-btn', false);
     }
+}
+
+function backupDatabase() {
+    setButtonLoading('backup-db-btn', true);
+    fetch('/admin/backup-db', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(handleResponse)
+    .then(response => {
+        if (response.download_url) {
+            window.location.href = response.download_url;
+        }
+    })
+    .catch(error => {
+        showMessage(error.message || 'Failed to backup database', true);
+    })
+    .finally(() => {
+        setButtonLoading('backup-db-btn', false);
+    });
+}
+
+function restoreDatabase(event) {
+    event.preventDefault();
+    const fileInput = document.getElementById('restore-file');
+    const file = fileInput.files[0];
+    if (!file) {
+        showMessage('Please select a database file to restore', true);
+        return;
+    }
+
+    setButtonLoading('restore-db-btn', true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    fetch('/admin/restore-db', {
+        method: 'POST',
+        body: formData
+    })
+    .then(handleResponse)
+    .then(() => {
+        showMessage('Database restored successfully!');
+        setTimeout(() => window.location.reload(), 1500);
+    })
+    .catch(error => {
+        showMessage(error.message || 'Failed to restore database', true);
+    })
+    .finally(() => {
+        setButtonLoading('restore-db-btn', false);
+    });
+}
+
+function changePassword() {
+    const currentPassword = document.getElementById('current-password').value;
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+
+    if (newPassword !== confirmPassword) {
+        showMessage('New passwords do not match', true);
+        return;
+    }
+
+    setButtonLoading('change-password-btn', true);
+    fetch('/admin/change-password', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            current_password: currentPassword,
+            new_password: newPassword
+        })
+    })
+    .then(handleResponse)
+    .then(() => {
+        showMessage('Password changed successfully!');
+        document.getElementById('change-password-form').reset();
+    })
+    .catch(error => {
+        showMessage(error.message || 'Failed to change password', true);
+    })
+    .finally(() => {
+        setButtonLoading('change-password-btn', false);
+    });
 }
 
 // Initialize last update time if available from localStorage
