@@ -25,6 +25,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./app/static:/usr/share/nginx/html/static:ro
+      - /etc/nginx/conf.d:/etc/nginx/conf.d:rw
     depends_on:
       - web
     restart: unless-stopped
