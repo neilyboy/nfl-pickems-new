@@ -27,7 +27,8 @@ def admin_required(f):
 @login_required
 @admin_required
 def index():
-    current_week = GameService.get_current_nfl_week()
+    week_info = GameService.get_current_nfl_week()
+    current_week = week_info['week'] if isinstance(week_info, dict) else week_info
     return render_template('admin/index.html', current_week=current_week)
 
 @bp.route('/refresh-games', methods=['GET', 'POST'])
