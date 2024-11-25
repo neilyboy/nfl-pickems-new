@@ -182,6 +182,160 @@ ls -la instance/
 ls -la backups/
 ```
 
+## Production Deployment
+
+### Prerequisites
+- Ubuntu/Debian server
+- Docker and Docker Compose installed
+- Git installed
+- Root or sudo access
+
+### Installation Steps
+
+1. Install required packages:
+```bash
+# Update system
+sudo apt update
+sudo apt upgrade -y
+
+# Install required packages
+sudo apt install -y docker.io docker-compose git curl
+
+# Add your user to docker group
+sudo usermod -aG docker $USER
+
+# Log out and log back in for the group change to take effect
+```
+
+2. Set up application directory:
+```bash
+# Create directory
+sudo mkdir -p /opt/nfl-pickems
+sudo chown -R $USER:$USER /opt/nfl-pickems
+cd /opt/nfl-pickems
+
+# Clone repository
+git clone https://github.com/neilyboy/nfl-pickems-new.git .
+```
+
+3. Create systemd service for persistence and auto-start:
+```bash
+sudo nano /etc/systemd/system/nfl-pickems.service
+```
+
+Add this content to the service file:
+```ini
+[Unit]
+Description=NFL Pickems Docker Compose Application
+Requires=docker.service
+After=docker.service network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/nfl-pickems
+ExecStartPre=/bin/sleep 10
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
+```
+
+4. Enable and start the service:
+```bash
+# Reload systemd
+sudo systemctl daemon-reload
+
+# Enable service to start on boot
+sudo systemctl enable nfl-pickems.service
+
+# Start the service
+sudo systemctl start nfl-pickems.service
+```
+
+5. Verify installation:
+```bash
+# Check service status
+sudo systemctl status nfl-pickems.service
+
+# Check running containers
+docker ps
+
+# View logs if needed
+sudo journalctl -u nfl-pickems.service -f
+```
+
+### Data Persistence
+The application uses Docker volumes to ensure data persistence:
+- Database is stored in a Docker volume named `app-data`
+- Volume persists across container restarts and system reboots
+- Database location: `/app/instance/app.db` inside the volume
+
+### Automatic Startup
+- Application automatically starts on system boot
+- Containers automatically restart on failure
+- Service waits for Docker and network to be ready before starting
+
+### Maintenance Commands
+
+**View Logs:**
+```bash
+# Service logs
+sudo journalctl -u nfl-pickems.service -f
+
+# Container logs
+docker logs nfl-pickems-web-1
+docker logs nfl-pickems-nginx-1
+```
+
+**Restart Application:**
+```bash
+sudo systemctl restart nfl-pickems.service
+```
+
+**Stop Application:**
+```bash
+sudo systemctl stop nfl-pickems.service
+```
+
+**Check Volume:**
+```bash
+docker volume ls
+docker volume inspect nfl-pickems_app-data
+```
+
+**Update Application:**
+```bash
+cd /opt/nfl-pickems
+git pull
+sudo systemctl restart nfl-pickems.service
+```
+
+### Troubleshooting
+
+1. If the service fails to start:
+   - Check logs: `sudo journalctl -u nfl-pickems.service -f`
+   - Ensure Docker is running: `sudo systemctl status docker`
+   - Verify permissions: `ls -l /opt/nfl-pickems`
+
+2. If database is not persisting:
+   - Check volume: `docker volume ls`
+   - Inspect volume: `docker volume inspect nfl-pickems_app-data`
+   - Verify docker-compose.yml has volume configuration
+
+3. If containers keep restarting:
+   - Check container logs: `docker logs nfl-pickems-web-1`
+   - Verify environment variables in .env file
+   - Check disk space: `df -h`
+
+### Security Notes
+- Ensure firewall allows access to port 80
+- Consider setting up SSL/TLS with Let's Encrypt
+- Regularly update system and Docker images
+- Back up the database volume regularly
+
 ## Project Structure
 
 ```
