@@ -17,7 +17,8 @@ services:
       - DATABASE_URL=sqlite:////app/instance/app.db
       - TZ=${TZ:-UTC}
       - INIT_DB=true
-    user: "${UID:-1000}:${GID:-1000}"
+      - HOST_UID=1000
+      - HOST_GID=1000
     restart: always
     env_file:
       - .env

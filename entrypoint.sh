@@ -5,6 +5,12 @@ echo "Starting entrypoint script..."
 
 cd /app
 
+# Set correct permissions for instance directory
+echo "Setting up instance directory permissions..."
+mkdir -p /app/instance
+chown -R ${HOST_UID:-1000}:${HOST_GID:-1000} /app/instance
+chmod 755 /app/instance
+
 # Function to wait for database to be accessible
 wait_for_db() {
     local retries=5
@@ -13,7 +19,7 @@ wait_for_db() {
     echo "Waiting for database directory to be accessible..."
     
     while [ $counter -lt $retries ]; do
-        if [ -w "/app" ]; then
+        if [ -w "/app/instance" ]; then
             echo "Database directory is accessible!"
             return 0
         fi
@@ -31,10 +37,11 @@ init_database() {
     echo "Initializing database..."
     
     # Create database file if it doesn't exist
-    if [ ! -f "/app/app.db" ]; then
+    if [ ! -f "/app/instance/app.db" ]; then
         echo "Creating new database file..."
-        touch "/app/app.db"
-        chmod 666 "/app/app.db"
+        touch "/app/instance/app.db"
+        chown ${HOST_UID:-1000}:${HOST_GID:-1000} "/app/instance/app.db"
+        chmod 644 "/app/instance/app.db"
     fi
     
     # Initialize migrations if they don't exist
