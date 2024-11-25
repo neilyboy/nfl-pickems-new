@@ -7,13 +7,8 @@ cd /app
 
 echo "Setting up database..."
 
-# Initialize database if it doesn't exist
-if [ ! -f "/app/instance/app.db" ]; then
-    echo "Creating new database..."
-    touch /app/instance/app.db
-fi
-
-# Initialize database with admin user if needed
+# Database should already exist from Dockerfile
+# Just initialize if needed
 if [ "$INIT_DB" = "true" ]; then
     echo "Initializing database with admin user..."
     flask init-db

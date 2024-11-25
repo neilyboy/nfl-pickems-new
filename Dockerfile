@@ -6,29 +6,26 @@ RUN apt-get update && \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Create app directory and set up app user
-RUN mkdir -p /app/instance && \
-    groupadd -r app && \
-    useradd -r -g app -s /bin/bash -d /app app && \
-    chown -R app:app /app && \
-    chmod -R 777 /app/instance
-
 WORKDIR /app
 
 # Copy requirements first for better caching
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Create app user and directories
+RUN groupadd -r app && \
+    useradd -r -g app -s /bin/bash -d /app app && \
+    mkdir -p /app/instance /app/migrations/versions && \
+    touch /app/instance/app.db && \
+    chown -R app:app /app && \
+    chmod -R 777 /app/instance && \
+    chmod 666 /app/instance/app.db && \
+    chmod -R 777 /app/migrations
+
 # Copy application code
 COPY . .
-
-# Set permissions before switching to app user
 RUN chown -R app:app /app && \
-    chmod +x /app/entrypoint.sh && \
-    chmod -R 777 /app/instance && \
-    mkdir -p /app/migrations/versions && \
-    chown -R app:app /app/migrations && \
-    chmod -R 777 /app/migrations
+    chmod +x /app/entrypoint.sh
 
 # Set environment variables
 ENV FLASK_APP=/app/app \
