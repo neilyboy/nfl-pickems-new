@@ -5,22 +5,23 @@ echo "Starting entrypoint script..."
 
 cd /app
 
-# Initialize migrations if they don't exist
-if [ ! -d "/app/migrations" ] || [ ! -f "/app/migrations/alembic.ini" ]; then
-    echo "Initializing migrations..."
-    flask db init || sudo flask db init
-fi
+# Initialize database directory if it doesn't exist
+mkdir -p /app/instance
 
-echo "Running database migrations..."
-flask db upgrade || sudo flask db upgrade
+# Create database tables first
+echo "Creating database tables..."
+flask db stamp head
+flask db migrate
+flask db upgrade
 
+# Initialize database with admin user if needed
 if [ "$INIT_DB" = "true" ]; then
     echo "Initializing database with admin user..."
-    flask init-db || sudo flask init-db
+    flask init-db
 fi
 
 echo "Ensuring admin user exists..."
-flask ensure-admin || sudo flask ensure-admin
+flask ensure-admin
 
 echo "Entrypoint script completed. Starting application..."
 

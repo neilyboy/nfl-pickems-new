@@ -1,20 +1,16 @@
 FROM python:3.12-slim
 
-# Install system dependencies including sudo
+# Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app directory and set up app user
-RUN mkdir -p /app/instance /app/migrations/versions && \
+RUN mkdir -p /app/instance /app/migrations && \
     groupadd -r app && \
     useradd -r -g app -s /bin/bash -d /app app && \
     chown -R app:app /app && \
     chmod -R 777 /app/instance /app/migrations
-
-# Allow app user to use sudo for flask commands
-RUN echo "app ALL=(ALL) NOPASSWD: /usr/local/bin/flask" >> /etc/sudoers
 
 WORKDIR /app
 
