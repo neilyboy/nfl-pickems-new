@@ -3,32 +3,37 @@
 {% block content %}
 <div class="container fade-in">
     <!-- Header with User Selection -->
-    <div class="card mb-4">
+    <div class="card mb-4 comparison-card">
         <div class="card-header">
-            <h4 class="mb-0">Head-to-Head Comparison</h4>
+            <h4 class="mb-0"><i class="fas fa-users-between-lines me-2"></i>Head-to-Head Comparison</h4>
         </div>
         <div class="card-body">
             <form method="GET" class="row g-3 align-items-end">
                 <div class="col-md-5">
                     <label for="user1" class="form-label">Player 1</label>
-                    <select class="form-select" name="user1" id="user1" required>
+                    <select class="form-select user-select" name="user1" id="user1" required>
                         <option value="" {% if not user1 %}selected{% endif %}>Select Player 1</option>
                         {% for u in users %}
                         <option value="{{ u.id }}" {% if user1 and user1.id == u.id %}selected{% endif %}>{{ u.username }}</option>
                         {% endfor %}
                     </select>
                 </div>
+                <div class="col-md-2 text-center">
+                    <div class="vs-badge">VS</div>
+                </div>
                 <div class="col-md-5">
                     <label for="user2" class="form-label">Player 2</label>
-                    <select class="form-select" name="user2" id="user2" required>
+                    <select class="form-select user-select" name="user2" id="user2" required>
                         <option value="" {% if not user2 %}selected{% endif %}>Select Player 2</option>
                         {% for u in users %}
                         <option value="{{ u.id }}" {% if user2 and user2.id == u.id %}selected{% endif %}>{{ u.username }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">Compare</button>
+                <div class="col-12 text-center">
+                    <button type="submit" class="btn btn-primary btn-lg px-4">
+                        <i class="fas fa-chart-line me-2"></i>Compare Picks
+                    </button>
                 </div>
             </form>
         </div>
@@ -36,33 +41,48 @@
 
     {% if user1 and user2 %}
     <!-- Comparison Stats -->
-    <div class="card mb-4">
+    <div class="card mb-4 stats-card">
         <div class="card-header">
-            <h5 class="mb-0">Season Overview</h5>
+            <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Season Overview</h5>
         </div>
         <div class="card-body">
-            <div class="row">
+            <div class="row g-4">
                 <div class="col-md-4">
-                    <div class="text-center">
-                        <h6>Different Picks</h6>
-                        <h2 class="text-primary">{{ stats.different_picks }}</h2>
-                        <small class="text-muted">Total games picked differently</small>
+                    <div class="stat-box different-picks">
+                        <div class="stat-icon">
+                            <i class="fas fa-shuffle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h6>Different Picks</h6>
+                            <h2 class="text-primary">{{ stats.different_picks }}</h2>
+                            <small class="text-muted">Total games picked differently</small>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="text-center">
-                        <h6>Head-to-Head Record</h6>
-                        <h2 class="{% if stats.head_to_head[user1.id] > stats.head_to_head[user2.id] %}text-success{% elif stats.head_to_head[user1.id] < stats.head_to_head[user2.id] %}text-danger{% else %}text-primary{% endif %}">
-                            {{ stats.head_to_head[user1.id] }}-{{ stats.head_to_head[user2.id] }}
-                        </h2>
-                        <small class="text-muted">When picking different teams</small>
+                    <div class="stat-box head-to-head">
+                        <div class="stat-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h6>Head-to-Head Record</h6>
+                            <h2 class="{% if stats.head_to_head[user1.id] > stats.head_to_head[user2.id] %}text-success{% elif stats.head_to_head[user1.id] < stats.head_to_head[user2.id] %}text-danger{% else %}text-primary{% endif %}">
+                                {{ stats.head_to_head[user1.id] }}-{{ stats.head_to_head[user2.id] }}
+                            </h2>
+                            <small class="text-muted">When picking different teams</small>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="text-center">
-                        <h6>Pick Agreement</h6>
-                        <h2 class="text-info">{{ "%.1f"|format(stats.agreement_percentage) }}%</h2>
-                        <small class="text-muted">Games picked the same</small>
+                    <div class="stat-box agreement">
+                        <div class="stat-icon">
+                            <i class="fas fa-handshake"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h6>Pick Agreement</h6>
+                            <h2 class="text-info">{{ "%.1f"|format(stats.agreement_percentage) }}%</h2>
+                            <small class="text-muted">Games picked the same</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -70,9 +90,9 @@
     </div>
 
     <!-- Weekly Breakdown -->
-    <div class="card">
+    <div class="card weekly-breakdown">
         <div class="card-header">
-            <h5 class="mb-0">Weekly Breakdown</h5>
+            <h5 class="mb-0"><i class="fas fa-calendar-week me-2"></i>Weekly Breakdown</h5>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -80,34 +100,52 @@
                     <thead>
                         <tr>
                             <th>Week</th>
-                            <th>Different Picks</th>
-                            <th>{{ user1.username }}'s Pick</th>
-                            <th>{{ user2.username }}'s Pick</th>
+                            <th>Different</th>
+                            <th>{{ user1.username }}'s Picks</th>
+                            <th>{{ user2.username }}'s Picks</th>
                             <th>Winner</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for week in weekly_breakdown %}
-                        <tr>
-                            <td>Week {{ week.week }}</td>
-                            <td>{{ week.different_picks }}</td>
-                            <td>
+                        <tr class="week-row">
+                            <td class="week-number">
+                                <span class="badge bg-primary">Week {{ week.week }}</span>
+                            </td>
+                            <td class="different-count">
+                                <span class="badge {% if week.different_picks > 0 %}bg-warning{% else %}bg-success{% endif %}">
+                                    {{ week.different_picks }}
+                                </span>
+                            </td>
+                            <td class="user-picks">
                                 {% for game in week.games %}
-                                <div class="{% if game.winner == game.user1_pick %}text-success{% elif game.winner %}text-danger{% endif %}">
-                                    {{ game.user1_pick }}
+                                <div class="pick-item {% if game.winner == game.user1_pick %}correct{% elif game.winner %}incorrect{% endif %}">
+                                    <img src="{{ url_for('static', filename='img/teams/' + game.user1_pick.lower() + '.png') }}" 
+                                         alt="{{ game.user1_pick }}" class="team-logo">
+                                    <span>{{ game.user1_pick }}</span>
                                 </div>
                                 {% endfor %}
                             </td>
-                            <td>
+                            <td class="user-picks">
                                 {% for game in week.games %}
-                                <div class="{% if game.winner == game.user2_pick %}text-success{% elif game.winner %}text-danger{% endif %}">
-                                    {{ game.user2_pick }}
+                                <div class="pick-item {% if game.winner == game.user2_pick %}correct{% elif game.winner %}incorrect{% endif %}">
+                                    <img src="{{ url_for('static', filename='img/teams/' + game.user2_pick.lower() + '.png') }}" 
+                                         alt="{{ game.user2_pick }}" class="team-logo">
+                                    <span>{{ game.user2_pick }}</span>
                                 </div>
                                 {% endfor %}
                             </td>
-                            <td>
+                            <td class="winners">
                                 {% for game in week.games %}
-                                <div>{{ game.winner or 'TBD' }}</div>
+                                <div class="pick-item">
+                                    {% if game.winner %}
+                                    <img src="{{ url_for('static', filename='img/teams/' + game.winner.lower() + '.png') }}" 
+                                         alt="{{ game.winner }}" class="team-logo">
+                                    <span>{{ game.winner }}</span>
+                                    {% else %}
+                                    <span class="text-muted">TBD</span>
+                                    {% endif %}
+                                </div>
                                 {% endfor %}
                             </td>
                         </tr>
@@ -121,15 +159,129 @@
 </div>
 
 <style>
-    .table td {
-        vertical-align: top;
-        padding: 1rem;
+    .comparison-card {
+        border: none;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
     }
-    .table td div {
+
+    .vs-badge {
+        background: linear-gradient(45deg, #ff6b6b, #ff8e53);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+    }
+
+    .user-select {
+        border-radius: 10px;
+        padding: 12px;
+        border: 2px solid rgba(255,255,255,0.1);
+        background-color: rgba(255,255,255,0.05);
+        transition: all 0.3s ease;
+    }
+
+    .user-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
+    }
+
+    .stat-box {
+        background: rgba(255,255,255,0.05);
+        border-radius: 15px;
+        padding: 1.5rem;
+        height: 100%;
+        transition: transform 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .stat-box:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-icon {
+        background: linear-gradient(45deg, #0d6efd, #0dcaf0);
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .stat-icon i {
+        font-size: 1.5rem;
+        color: white;
+    }
+
+    .stat-content {
+        flex-grow: 1;
+    }
+
+    .stat-content h2 {
+        margin: 0.5rem 0;
+        font-size: 2rem;
+    }
+
+    .weekly-breakdown {
+        border: none;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+
+    .week-row {
+        transition: background-color 0.3s ease;
+    }
+
+    .week-row:hover {
+        background-color: rgba(255,255,255,0.05);
+    }
+
+    .pick-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem;
         margin-bottom: 0.5rem;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.02);
     }
-    .table td div:last-child {
-        margin-bottom: 0;
+
+    .pick-item.correct {
+        background: rgba(25,135,84,0.1);
+    }
+
+    .pick-item.incorrect {
+        background: rgba(220,53,69,0.1);
+    }
+
+    .team-logo {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+    }
+
+    .different-count .badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .stat-box {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .pick-item {
+            font-size: 0.9rem;
+        }
+        
+        .team-logo {
+            width: 20px;
+            height: 20px;
+        }
     }
 </style>
 {% endblock %}
