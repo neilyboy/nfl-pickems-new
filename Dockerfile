@@ -3,6 +3,7 @@ FROM python:3.12-slim
 # Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app directory and set up app user
@@ -23,7 +24,8 @@ COPY . .
 
 # Set permissions
 RUN chown -R app:app /app && \
-    chmod +x /app/entrypoint.sh
+    chmod +x /app/entrypoint.sh && \
+    chmod -R 777 /app/instance /app/migrations
 
 # Set environment variables
 ENV FLASK_APP=/app/app \
