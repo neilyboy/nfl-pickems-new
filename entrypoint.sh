@@ -3,6 +3,9 @@ set -e
 
 echo "Starting entrypoint script..."
 
+# Change to app directory
+cd /app
+
 # Initialize migrations if they don't exist
 if [ ! -f /app/migrations/alembic.ini ]; then
     echo "Initializing database migrations..."
