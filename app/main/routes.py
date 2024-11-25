@@ -25,39 +25,45 @@ def admin_required(f):
 
 def get_team_abbrev(team_name):
     """Convert full team name to abbreviation"""
-    # If it's already an abbreviation (2-4 letters), return it uppercase
-    if 2 <= len(team_name) <= 4:
-        abbrev = team_name.upper()
-        # Special case for Washington which can be either WAS or WSH
-        if abbrev == 'WAS':
-            return 'WSH'
-        if abbrev in NFL_TEAMS:
-            return abbrev
-    
-    # Otherwise try to find it by full name
+    if not team_name:
+        return None
+        
     team_name = team_name.upper()
-    for abbrev, team_data in NFL_TEAMS.items():
-        if team_data['name'].upper() == team_name:
-            return abbrev
-    
-    # If we still haven't found it, try some common variations
-    team_variations = {
-        'LAC': ['LA CHARGERS', 'LOS ANGELES CHARGERS'],
-        'LAR': ['LA RAMS', 'LOS ANGELES RAMS'],
-        'WSH': ['WAS', 'WASHINGTON'],
-        'SF': ['SAN FRAN', 'SAN FRANCISCO', '49ERS', 'NINERS'],
-        'TB': ['TAMPA', 'TAMPA BAY', 'BUCCANEERS', 'BUCS'],
-        'GB': ['GREEN BAY'],
-        'NE': ['NEW ENGLAND', 'PATRIOTS', 'PATS'],
-        'NO': ['NEW ORLEANS', 'SAINTS'],
-        'KC': ['KANSAS CITY', 'CHIEFS']
+    abbrev_map = {
+        'ARIZONA': 'ari', 'CARDINALS': 'ari', 'ARI': 'ari',
+        'ATLANTA': 'atl', 'FALCONS': 'atl', 'ATL': 'atl',
+        'BALTIMORE': 'bal', 'RAVENS': 'bal', 'BAL': 'bal',
+        'BUFFALO': 'buf', 'BILLS': 'buf', 'BUF': 'buf',
+        'CAROLINA': 'car', 'PANTHERS': 'car', 'CAR': 'car',
+        'CHICAGO': 'chi', 'BEARS': 'chi', 'CHI': 'chi',
+        'CINCINNATI': 'cin', 'BENGALS': 'cin', 'CIN': 'cin',
+        'CLEVELAND': 'cle', 'BROWNS': 'cle', 'CLE': 'cle',
+        'DALLAS': 'dal', 'COWBOYS': 'dal', 'DAL': 'dal',
+        'DENVER': 'den', 'BRONCOS': 'den', 'DEN': 'den',
+        'DETROIT': 'det', 'LIONS': 'det', 'DET': 'det',
+        'GREEN BAY': 'gb', 'PACKERS': 'gb', 'GB': 'gb',
+        'HOUSTON': 'hou', 'TEXANS': 'hou', 'HOU': 'hou',
+        'INDIANAPOLIS': 'ind', 'COLTS': 'ind', 'IND': 'ind',
+        'JACKSONVILLE': 'jax', 'JAGUARS': 'jax', 'JAX': 'jax',
+        'KANSAS CITY': 'kc', 'CHIEFS': 'kc', 'KC': 'kc',
+        'LOS ANGELES CHARGERS': 'lac', 'CHARGERS': 'lac', 'LAC': 'lac',
+        'LOS ANGELES RAMS': 'lar', 'RAMS': 'lar', 'LAR': 'lar',
+        'LAS VEGAS': 'lv', 'RAIDERS': 'lv', 'LV': 'lv',
+        'MIAMI': 'mia', 'DOLPHINS': 'mia', 'MIA': 'mia',
+        'MINNESOTA': 'min', 'VIKINGS': 'min', 'MIN': 'min',
+        'NEW ENGLAND': 'ne', 'PATRIOTS': 'ne', 'NE': 'ne',
+        'NEW ORLEANS': 'no', 'SAINTS': 'no', 'NO': 'no',
+        'NEW YORK GIANTS': 'nyg', 'GIANTS': 'nyg', 'NYG': 'nyg',
+        'NEW YORK JETS': 'nyj', 'JETS': 'nyj', 'NYJ': 'nyj',
+        'PHILADELPHIA': 'phi', 'EAGLES': 'phi', 'PHI': 'phi',
+        'PITTSBURGH': 'pit', 'STEELERS': 'pit', 'PIT': 'pit',
+        'SEATTLE': 'sea', 'SEAHAWKS': 'sea', 'SEA': 'sea',
+        'SAN FRANCISCO': 'sf', '49ERS': 'sf', 'SF': 'sf',
+        'TAMPA BAY': 'tb', 'BUCCANEERS': 'tb', 'TB': 'tb',
+        'TENNESSEE': 'ten', 'TITANS': 'ten', 'TEN': 'ten',
+        'WASHINGTON': 'was', 'COMMANDERS': 'was', 'WAS': 'was'
     }
-    
-    for abbrev, variations in team_variations.items():
-        if team_name in variations:
-            return abbrev
-    
-    return team_name if team_name in NFL_TEAMS else None
+    return abbrev_map.get(team_name)
 
 @bp.context_processor
 def inject_year():
@@ -274,7 +280,7 @@ def standings(week=None):
                 current_app.logger.info(f"Processing pick for {user.username} - Raw team: {team_picked}")
                 
                 # Get the team abbreviation from our mapping
-                team_abbrev = TEAM_ABBREV.get(team_picked)
+                team_abbrev = get_team_abbrev(team_picked)
                 if team_abbrev:
                     logo_path = f"/static/img/teams/{team_abbrev}.png"
                     current_app.logger.info(f"Found team abbreviation: {team_abbrev}, Logo path: {logo_path}")
@@ -394,6 +400,8 @@ def head_to_head():
             winner = None
             if game.home_score is not None and game.away_score is not None:
                 winner = game.home_team if game.home_score > game.away_score else game.away_team
+                # Convert winner to abbreviation for logo
+                winner = get_team_abbrev(winner)
             
             if pick1.team_picked != pick2.team_picked:
                 stats['different_picks'] += 1
@@ -401,14 +409,14 @@ def head_to_head():
                 
                 # If game is finished, update head-to-head record
                 if winner:
-                    if pick1.team_picked == winner:
+                    if get_team_abbrev(pick1.team_picked) == winner:
                         stats['head_to_head'][user1.id] += 1
                     else:
                         stats['head_to_head'][user2.id] += 1
             
             week_games.append({
-                'user1_pick': pick1.team_picked,
-                'user2_pick': pick2.team_picked,
+                'user1_pick': get_team_abbrev(pick1.team_picked),
+                'user2_pick': get_team_abbrev(pick2.team_picked),
                 'winner': winner
             })
         
