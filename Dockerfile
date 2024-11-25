@@ -7,11 +7,11 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app directory and set up app user
-RUN mkdir -p /app/instance /app/migrations && \
+RUN mkdir -p /app/instance && \
     groupadd -r app && \
     useradd -r -g app -s /bin/bash -d /app app && \
     chown -R app:app /app && \
-    chmod -R 777 /app/instance /app/migrations
+    chmod -R 777 /app/instance
 
 WORKDIR /app
 
@@ -24,6 +24,7 @@ COPY . .
 
 # Create migrations directory and set permissions
 RUN mkdir -p /app/migrations/versions && \
+    flask db init || true && \
     chown -R app:app /app && \
     chmod +x /app/entrypoint.sh && \
     chmod -R 777 /app/instance /app/migrations /app/migrations/versions

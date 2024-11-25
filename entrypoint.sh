@@ -5,21 +5,18 @@ echo "Starting entrypoint script..."
 
 cd /app
 
-# Initialize database directory if it doesn't exist
+# Create and set permissions for required directories
 mkdir -p /app/instance
+chmod -R 777 /app/instance
 
-echo "Setting up database and migrations..."
+echo "Setting up database..."
 
-# Initialize migrations if they don't exist
-if [ ! -d "/app/migrations" ] || [ -z "$(ls -A /app/migrations)" ]; then
-    echo "Initializing migrations directory..."
-    flask db init
+# Initialize database if it doesn't exist
+if [ ! -f "/app/instance/app.db" ]; then
+    echo "Creating new database..."
+    touch /app/instance/app.db
+    chmod 777 /app/instance/app.db
 fi
-
-# Create and apply migrations
-echo "Running database migrations..."
-flask db migrate -m "Auto-migration" || echo "Migration creation failed (this is normal if no changes), continuing..."
-flask db upgrade || echo "Migration upgrade failed, continuing..."
 
 # Initialize database with admin user if needed
 if [ "$INIT_DB" = "true" ]; then
@@ -28,7 +25,7 @@ if [ "$INIT_DB" = "true" ]; then
 fi
 
 echo "Ensuring admin user exists..."
-flask ensure-admin
+flask ensure-admin || echo "Admin user check failed, continuing..."
 
 echo "Entrypoint script completed. Starting application..."
 
