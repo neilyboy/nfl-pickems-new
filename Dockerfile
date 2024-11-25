@@ -6,42 +6,40 @@ RUN apt-get update && \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Set working directory
 WORKDIR /app
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+# Create app user and group
+RUN groupadd -r appgroup && \
+    useradd -r -g appgroup -d /app appuser && \
+    mkdir -p /app/instance && \
+    mkdir -p /app/migrations/versions && \
+    chown -R appuser:appgroup /app && \
+    chmod -R 755 /app && \
+    chmod 777 /app/instance
+
+# Copy requirements and install dependencies
+COPY --chown=appuser:appgroup requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create app user and directories
-RUN groupadd -r app && \
-    useradd -r -g app -s /bin/bash -d /app app && \
-    mkdir -p /app/instance /app/migrations/versions && \
-    touch /app/instance/app.db && \
-    chown -R app:app /app && \
-    chmod -R 777 /app/instance && \
-    chmod 666 /app/instance/app.db && \
-    chmod -R 777 /app/migrations
-
 # Copy application code
-COPY . .
-RUN chown -R app:app /app && \
-    chmod +x /app/entrypoint.sh
+COPY --chown=appuser:appgroup . .
+RUN chmod +x /app/entrypoint.sh
 
 # Set environment variables
 ENV FLASK_APP=/app/app \
     FLASK_ENV=production \
     PYTHONPATH=/app \
     PYTHONUNBUFFERED=1 \
-    DATABASE_URL=sqlite:////app/instance/app.db
+    DATABASE_URL=sqlite:////app/instance/app.db \
+    DATABASE_DIR=/app/instance
 
 # Switch to app user
-USER app
+USER appuser
 
-# Expose port 8000
+# Expose port
 EXPOSE 8000
 
-# Set entrypoint
+# Set entrypoint and command
 ENTRYPOINT ["/app/entrypoint.sh"]
-
-# Default command
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:create_app()"]
