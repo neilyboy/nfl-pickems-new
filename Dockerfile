@@ -21,11 +21,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code first (as root)
 COPY . .
 
-# Initialize database and migrations as root
+# Initialize directories and set permissions
 ENV FLASK_APP=/app/app
 RUN mkdir -p /app/instance /app/migrations/versions && \
     touch /app/instance/app.db && \
-    flask db init && \
     chown -R app:app /app && \
     chmod -R 777 /app && \
     chmod +x entrypoint.sh
