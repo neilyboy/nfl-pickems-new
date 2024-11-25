@@ -3,25 +3,26 @@ set -e
 
 echo "Starting entrypoint script..."
 
-# Change to app directory
+# Change to app directory and create migrations directory
 cd /app
+mkdir -p /app/migrations/versions
 
 # Initialize migrations if they don't exist
 if [ ! -f /app/migrations/alembic.ini ]; then
     echo "Initializing database migrations..."
-    flask db init
+    FLASK_APP=/app/app flask db init
 fi
 
 echo "Running database migrations..."
-flask db upgrade
+FLASK_APP=/app/app flask db upgrade
 
 if [ "$INIT_DB" = "true" ]; then
     echo "Initializing database with admin user..."
-    flask init-db
+    FLASK_APP=/app/app flask init-db
 fi
 
 echo "Ensuring admin user exists..."
-flask ensure-admin
+FLASK_APP=/app/app flask ensure-admin
 
 echo "Entrypoint script completed. Starting application..."
 
