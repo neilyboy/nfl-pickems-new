@@ -22,10 +22,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Set permissions
-RUN chown -R app:app /app && \
+# Create migrations directory and set permissions
+RUN mkdir -p /app/migrations/versions && \
+    chown -R app:app /app && \
     chmod +x /app/entrypoint.sh && \
-    chmod -R 777 /app/instance /app/migrations
+    chmod -R 777 /app/instance /app/migrations /app/migrations/versions
 
 # Set environment variables
 ENV FLASK_APP=/app/app \
