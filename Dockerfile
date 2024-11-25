@@ -37,8 +37,11 @@ ENV FLASK_APP=/app/app \
 # Switch to app user
 USER app
 
+# Expose port 8000
+EXPOSE 8000
+
 # Set entrypoint
 ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Default command
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:create_app()"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:create_app()"]

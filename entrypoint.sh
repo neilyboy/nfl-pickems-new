@@ -9,22 +9,19 @@ cd /app
 if [ ! -d "/app/migrations" ] || [ ! -f "/app/migrations/alembic.ini" ]; then
     echo "Initializing migrations..."
     # Try to init migrations
-    if ! sudo -u "$USER" flask db init; then
-        echo "Failed to initialize migrations, trying as root..."
-        sudo flask db init
-    fi
+    flask db init || sudo -u root flask db init
 fi
 
 echo "Running database migrations..."
-sudo -u "$USER" flask db upgrade
+flask db upgrade || sudo -u root flask db upgrade
 
 if [ "$INIT_DB" = "true" ]; then
     echo "Initializing database with admin user..."
-    sudo -u "$USER" flask init-db
+    flask init-db || sudo -u root flask init-db
 fi
 
 echo "Ensuring admin user exists..."
-sudo -u "$USER" flask ensure-admin
+flask ensure-admin || sudo -u root flask ensure-admin
 
 echo "Entrypoint script completed. Starting application..."
 
