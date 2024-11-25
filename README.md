@@ -7,6 +7,9 @@ A web application for managing NFL game predictions with friends. Users can make
 - Weekly game picks for all NFL games
 - Real-time game score updates via ESPN API
 - Standings page showing pick accuracy
+  - Interactive trend visualization
+  - Weekly performance tracking
+  - Visual pick history
 - Monday Night Football total points prediction
 - Admin interface for managing users and games
   - Database backup and restore
@@ -14,32 +17,40 @@ A web application for managing NFL game predictions with friends. Users can make
   - User management
 - Responsive design for mobile and desktop
 
-## Production Deployment on Ubuntu Server
+## Technologies Used
+
+- Python 3.12
+- Flask 3.0.0
+- SQLAlchemy 2.0.23
+- Bootstrap 5.3.2
+- JavaScript Libraries
+  - ApexCharts (Interactive trend visualization)
+  - Font Awesome (Icons)
+  - Bootstrap Bundle (UI components)
+
+## Installation on Ubuntu 24.04
 
 ### Prerequisites
 
-1. Ubuntu Server 20.04 LTS or newer
-2. Docker and Docker Compose installed:
+1. Update system packages:
 ```bash
-# Update package list
-sudo apt update
+sudo apt update && sudo apt upgrade -y
+```
 
+2. Install Docker and Docker Compose:
+```bash
 # Install required packages
 sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
 
 # Add Docker's official GPG key
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
 # Add Docker repository
-sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 # Install Docker
 sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io
-
-# Install Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 # Add your user to docker group (optional, for running docker without sudo)
 sudo usermod -aG docker $USER
@@ -57,199 +68,142 @@ cd nfl-pickems
 2. Set up environment variables:
 ```bash
 cp .env.example .env
-nano .env  # Edit with your production settings
+```
+
+3. Edit the .env file with your settings:
+```bash
+nano .env
 ```
 
 Required environment variables:
-```
-FLASK_APP=run.py
+```env
+FLASK_APP=app
 FLASK_ENV=production
 SECRET_KEY=your-secure-secret-key
+ADMIN_USERNAME=your-admin-username
+ADMIN_PASSWORD=your-secure-password
 DATABASE_URL=sqlite:///instance/app.db
-BACKUP_DIR=/app/backups
+TIMEZONE=US/Eastern
+NGINX_PORT=8080
+APP_PORT=8000
 ```
 
-3. Create required directories:
+4. Create required directories:
 ```bash
 mkdir -p instance backups
-chmod 777 instance backups  # Ensure Docker has write permissions
+chmod 777 instance backups
 ```
 
-4. Build and start the containers:
+5. Build and start the application:
 ```bash
-docker-compose up -d --build
+# Build and start containers in detached mode
+docker compose up -d --build
+
+# Check container status
+docker compose ps
 ```
 
-5. Initialize the database and create admin user:
+6. Access the application:
+- Open your web browser and navigate to `http://your-server-ip:8080`
+- Log in with the admin credentials you set in the .env file
+
+### Maintenance Commands
+
+1. View logs:
 ```bash
-# Initialize database
-docker-compose exec web flask db upgrade
+# View all logs
+docker compose logs
 
-# Create initial admin user (follow prompts)
-docker-compose exec web python create_admin.py
+# View specific service logs
+docker compose logs web
+docker compose logs nginx
+
+# Follow logs in real-time
+docker compose logs -f
 ```
 
-6. Configure your domain (optional):
+2. Restart services:
 ```bash
-# Edit nginx.conf
-nano nginx.conf
-
-# Update server_name with your domain
-server {
-    listen 80;
-    server_name your-domain.com;  # Change this
-    ...
-}
+docker compose restart
 ```
 
-7. Set up SSL with Let's Encrypt (recommended):
+3. Stop services:
 ```bash
-# Install certbot
-sudo apt install -y certbot python3-certbot-nginx
-
-# Get SSL certificate
-sudo certbot --nginx -d your-domain.com
+docker compose down
 ```
 
-### Maintenance
-
-#### Backup Database
-```bash
-# Manual backup
-docker-compose exec web flask db-backup
-
-# Backups are stored in ./backups directory
-```
-
-#### Update Application
+4. Update application:
 ```bash
 # Pull latest changes
 git pull
 
 # Rebuild and restart containers
-docker-compose up -d --build
-
-# Run any new migrations
-docker-compose exec web flask db upgrade
+docker compose down
+docker compose up -d --build
 ```
 
-#### View Logs
+5. Backup database:
 ```bash
-# View all logs
-docker-compose logs
+# Enter the web container
+docker compose exec web bash
 
-# View specific service logs
-docker-compose logs web
-docker-compose logs nginx
+# Run backup command
+flask db-backup
 
-# Follow logs
-docker-compose logs -f
+# Exit container
+exit
 ```
 
 ### Troubleshooting
 
 1. Check container status:
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
-2. Check application logs:
+2. Check container logs:
 ```bash
-docker-compose logs web
+docker compose logs web
 ```
 
-3. Restart services:
+3. Check nginx configuration:
 ```bash
-docker-compose restart
+docker compose exec nginx nginx -t
 ```
 
-4. Reset everything:
+4. Reset admin password:
 ```bash
-docker-compose down
-docker-compose up -d --build
+docker compose exec web flask reset-admin-password
 ```
 
-### Security Notes
-
-1. Always use strong passwords for admin account
-2. Keep your system and Docker updated
-3. Use SSL/TLS in production (Let's Encrypt)
-4. Regularly backup your database
-5. Monitor logs for suspicious activity
-
-## Local Development Setup
-
-1. Clone the repository:
+5. Check file permissions:
 ```bash
-git clone [your-repo-url]
-cd nfl-pickems
-```
-
-2. Create a virtual environment and activate it:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-4. Create environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-5. Initialize the database:
-```bash
-flask db upgrade
-python init_db.py
-```
-
-6. Create an admin user:
-```bash
-python create_admin.py
-```
-
-7. Start the development server:
-```bash
-flask run
+ls -la instance/
+ls -la backups/
 ```
 
 ## Project Structure
 
-- `/app` - Main application code
-  - `/admin` - Admin interface routes and forms
-  - `/auth` - Authentication routes
-  - `/models` - Database models
-  - `/services` - Business logic and external API integration
-  - `/static` - Static files (CSS, images)
-  - `/templates` - Jinja2 templates
-  - `/utils` - Utility functions
-- `/instance` - Instance-specific files (database)
-- `/backups` - Database backups
-- `/migrations` - Database migrations
-
-## Backup and Restore
-
-The application includes built-in backup and restore functionality:
-
-1. Access the admin dashboard
-2. Use the "Backup Database" button to create and download a backup
-3. Use the "Restore Database" to restore from a backup file
-
-Backups are stored in the `/backups` directory with timestamps.
-
-## Security
-
-- All admin routes are protected
-- Passwords are hashed using Werkzeug security
-- CSRF protection on all forms
-- Secure session handling
-- Regular database backups
-- Input validation and sanitization
+```
+nfl-pickems/
+├── app/                    # Application code
+│   ├── admin/             # Admin interface
+│   ├── auth/              # Authentication
+│   ├── main/              # Main routes
+│   ├── models/            # Database models
+│   ├── services/          # Business logic
+│   ├── static/            # Static files
+│   └── templates/         # HTML templates
+├── instance/              # Instance-specific files
+├── migrations/            # Database migrations
+├── backups/              # Database backups
+├── Dockerfile            # Container definition
+├── docker-compose.yml    # Container orchestration
+├── nginx.conf           # Nginx configuration
+├── entrypoint.sh        # Container entrypoint
+├── requirements.txt     # Python dependencies
+└── .env                # Environment variables
+```
 
 ## Contributing
 
@@ -261,8 +215,4 @@ Backups are stored in the `/backups` directory with timestamps.
 
 ## License
 
-MIT License
-
-## Support
-
-For issues and feature requests, please create an issue on GitHub.
+This project is licensed under the MIT License - see the LICENSE file for details.

@@ -10,6 +10,10 @@ from datetime import datetime
 from app import db
 from functools import wraps
 from app.data.nfl_teams import NFL_TEAMS
+import os
+
+# Debug: Print NFL_TEAMS at module level
+print("NFL_TEAMS dictionary loaded:", sorted(NFL_TEAMS.keys()))
 
 def admin_required(f):
     @wraps(f)
@@ -18,6 +22,46 @@ def admin_required(f):
             return jsonify({'error': 'Admin access required'}), 403
         return f(*args, **kws)
     return decorated_function
+
+def get_team_abbrev(team_name):
+    """Convert full team name to abbreviation"""
+    # If it's already an abbreviation (2-4 letters), return it uppercase
+    if 2 <= len(team_name) <= 4:
+        abbrev = team_name.upper()
+        # Special case for Washington which can be either WAS or WSH
+        if abbrev == 'WAS':
+            return 'WSH'
+        if abbrev in NFL_TEAMS:
+            return abbrev
+    
+    # Otherwise try to find it by full name
+    team_name = team_name.upper()
+    for abbrev, team_data in NFL_TEAMS.items():
+        if team_data['name'].upper() == team_name:
+            return abbrev
+    
+    # If we still haven't found it, try some common variations
+    team_variations = {
+        'LAC': ['LA CHARGERS', 'LOS ANGELES CHARGERS'],
+        'LAR': ['LA RAMS', 'LOS ANGELES RAMS'],
+        'WSH': ['WAS', 'WASHINGTON'],
+        'SF': ['SAN FRAN', 'SAN FRANCISCO', '49ERS', 'NINERS'],
+        'TB': ['TAMPA', 'TAMPA BAY', 'BUCCANEERS', 'BUCS'],
+        'GB': ['GREEN BAY'],
+        'NE': ['NEW ENGLAND', 'PATRIOTS', 'PATS'],
+        'NO': ['NEW ORLEANS', 'SAINTS'],
+        'KC': ['KANSAS CITY', 'CHIEFS']
+    }
+    
+    for abbrev, variations in team_variations.items():
+        if team_name in variations:
+            return abbrev
+    
+    return team_name if team_name in NFL_TEAMS else None
+
+@bp.context_processor
+def inject_year():
+    return {'current_year': datetime.now().year}
 
 @bp.route('/')
 @bp.route('/standings', defaults={'week': None})
@@ -32,123 +76,130 @@ def standings(week=None):
     # Get all games for the week
     games = GameCache.query.filter_by(week=selected_week).all()
     total_games = len(games)
+    current_app.logger.info(f"Found {total_games} games for week {selected_week}")
     
     # Get all picks for the week
     picks = Pick.query.filter_by(week=selected_week).all()
+    current_app.logger.info(f"Found {len(picks)} total picks for week {selected_week}")
     
     # Get MNF predictions for the week
     mnf_predictions = MNFPrediction.query.filter_by(week=selected_week).all()
     
+    # Define team abbreviation mapping
+    TEAM_ABBREV = {
+        'ARIZONA': 'ari', 'CARDINALS': 'ari', 'ARI': 'ari',
+        'ATLANTA': 'atl', 'FALCONS': 'atl', 'ATL': 'atl',
+        'BALTIMORE': 'bal', 'RAVENS': 'bal', 'BAL': 'bal',
+        'BUFFALO': 'buf', 'BILLS': 'buf', 'BUF': 'buf',
+        'CAROLINA': 'car', 'PANTHERS': 'car', 'CAR': 'car',
+        'CHICAGO': 'chi', 'BEARS': 'chi', 'CHI': 'chi',
+        'CINCINNATI': 'cin', 'BENGALS': 'cin', 'CIN': 'cin',
+        'CLEVELAND': 'cle', 'BROWNS': 'cle', 'CLE': 'cle',
+        'DALLAS': 'dal', 'COWBOYS': 'dal', 'DAL': 'dal',
+        'DENVER': 'den', 'BRONCOS': 'den', 'DEN': 'den',
+        'DETROIT': 'det', 'LIONS': 'det', 'DET': 'det',
+        'GREEN BAY': 'gb', 'PACKERS': 'gb', 'GB': 'gb',
+        'HOUSTON': 'hou', 'TEXANS': 'hou', 'HOU': 'hou',
+        'INDIANAPOLIS': 'ind', 'COLTS': 'ind', 'IND': 'ind',
+        'JACKSONVILLE': 'jax', 'JAGUARS': 'jax', 'JAX': 'jax', 'JAC': 'jax',
+        'KANSAS CITY': 'kc', 'CHIEFS': 'kc', 'KC': 'kc',
+        'LA CHARGERS': 'lac', 'LOS ANGELES CHARGERS': 'lac', 'LAC': 'lac',
+        'LA RAMS': 'lar', 'LOS ANGELES RAMS': 'lar', 'LAR': 'lar',
+        'LAS VEGAS': 'lv', 'RAIDERS': 'lv', 'LV': 'lv',
+        'MIAMI': 'mia', 'DOLPHINS': 'mia', 'MIA': 'mia',
+        'MINNESOTA': 'min', 'VIKINGS': 'min', 'MIN': 'min',
+        'NEW ENGLAND': 'ne', 'PATRIOTS': 'ne', 'NE': 'ne',
+        'NEW ORLEANS': 'no', 'SAINTS': 'no', 'NO': 'no',
+        'NY GIANTS': 'nyg', 'NEW YORK GIANTS': 'nyg', 'NYG': 'nyg',
+        'NY JETS': 'nyj', 'NEW YORK JETS': 'nyj', 'NYJ': 'nyj',
+        'PHILADELPHIA': 'phi', 'EAGLES': 'phi', 'PHI': 'phi',
+        'PITTSBURGH': 'pit', 'STEELERS': 'pit', 'PIT': 'pit',
+        'SEATTLE': 'sea', 'SEAHAWKS': 'sea', 'SEA': 'sea',
+        'SAN FRANCISCO': 'sf', '49ERS': 'sf', 'SF': 'sf',
+        'TAMPA BAY': 'tb', 'BUCCANEERS': 'tb', 'TB': 'tb',
+        'TENNESSEE': 'ten', 'TITANS': 'ten', 'TEN': 'ten',
+        'WASHINGTON': 'was', 'COMMANDERS': 'was', 'WAS': 'was', 'WSH': 'was'
+    }
+    
     # Calculate weekly records and prepare user data
     standings_data = []
+    season_standings = []
+    
     for user in users:
         weekly_record = user.get_weekly_record(selected_week)
         season_record = user.get_season_record()
         
+        # Get weekly trend data
+        weekly_trend = []
+        for w in range(1, current_week + 1):
+            week_record = user.get_weekly_record(w)
+            weekly_trend.append(week_record['wins'])
+        
         # Get user's picks for display
         user_picks = []
+        user_picks_count = 0
         for game in games:
             pick = next((p for p in picks if p.user_id == user.id and p.game_id == game.game_id), None)
             if pick:
-                pick_data = {
-                    'game_id': game.game_id,
-                    'away_team': game.away_team,
-                    'home_team': game.home_team,
-                    'team_picked': pick.team_picked,
-                    'is_correct': pick.is_correct,
-                    'away_team_abbrev': game.away_team_abbrev.upper(),
-                    'home_team_abbrev': game.home_team_abbrev.upper(),
-                    'away_team_score': game.away_score,
-                    'home_team_score': game.home_score,
-                    'game_status': game.status
-                }
-                user_picks.append(pick_data)
+                team_picked = pick.team_picked.strip().upper()
+                current_app.logger.info(f"Processing pick for {user.username} - Raw team: {team_picked}")
+                
+                # Get the team abbreviation from our mapping
+                team_abbrev = TEAM_ABBREV.get(team_picked)
+                if team_abbrev:
+                    logo_path = f"/static/img/teams/{team_abbrev}.png"
+                    current_app.logger.info(f"Found team abbreviation: {team_abbrev}, Logo path: {logo_path}")
+                    
+                    # Check if the logo file exists
+                    logo_file = current_app.root_path + "/static/img/teams/" + team_abbrev + ".png"
+                    if os.path.exists(logo_file):
+                        current_app.logger.info(f"Logo file exists: {logo_file}")
+                    else:
+                        current_app.logger.error(f"Logo file does not exist: {logo_file}")
+                    
+                    pick_data = {
+                        'team': team_picked,
+                        'team_logo': logo_path,
+                        'result': 'win' if pick.is_correct else 'loss' if pick.is_correct is not None else 'pending'
+                    }
+                    user_picks.append(pick_data)
+                    user_picks_count += 1
+                else:
+                    current_app.logger.error(f"Unknown team abbreviation: {team_picked}")
         
-        # Get user's MNF prediction
-        mnf_prediction = next((p for p in mnf_predictions if p.user_id == user.id), None)
-        mnf_data = None
-        if mnf_prediction:
-            mnf_data = {
-                'prediction': mnf_prediction.total_points,
-                'points_off': mnf_prediction.points_off if mnf_prediction.points_off is not None else None
-            }
+        current_app.logger.info(f"Found {user_picks_count} picks for user {user.username}")
         
         # Calculate weekly percentage
-        total_picks = weekly_record['total']  # Finished picks
-        total_possible = weekly_record['total_possible']  # Total picks made
+        total_picks = weekly_record['total']
         weekly_percentage = (weekly_record['wins'] / total_picks * 100) if total_picks > 0 else 0
         
         # Calculate season percentage
-        total_season_picks = season_record['total']  # Finished picks
-        total_season_possible = season_record['total_possible']  # Total picks made
+        total_season_picks = season_record['total']
         season_percentage = (season_record['wins'] / total_season_picks * 100) if total_season_picks > 0 else 0
         
         user_data = {
-            'id': user.id,
             'username': user.username,
-            'weekly_wins': weekly_record['wins'],  # Store raw number for sorting
-            'weekly_correct': f"{weekly_record['wins']}/{weekly_record['total']}",  # For display
+            'weekly_correct': weekly_record['wins'],
+            'weekly_total': weekly_record['total'],
             'weekly_percentage': weekly_percentage,
-            'season_wins': season_record['wins'],  # Store raw number for sorting
-            'season_correct': f"{season_record['wins']}/{season_record['total']}",  # For display
+            'season_correct': season_record['wins'],
+            'season_total': season_record['total'],
             'season_percentage': season_percentage,
+            'weekly_trend': weekly_trend,
             'picks': user_picks,
-            'mnf_prediction': mnf_data['prediction'] if mnf_data else None,
-            'mnf_points_off': mnf_data['points_off'] if mnf_data and mnf_data['points_off'] is not None else None,
-            'mnf_over': mnf_data['points_off'] < 0 if mnf_data and mnf_data['points_off'] is not None else True  # True means prediction was over
+            'mnf_prediction': next((p.total_points for p in mnf_predictions if p.user_id == user.id), None)
         }
         standings_data.append(user_data)
     
-    # Sort standings:
-    # 1. Most weekly wins
-    # 2. For ties, closest MNF prediction without going over
-    # 3. If still tied or no MNF prediction, keep original order
-    def sort_key(x):
-        wins = x['weekly_wins']
-        mnf_points_off = x.get('mnf_points_off')
-        mnf_over = x.get('mnf_over', True)
-        
-        # If prediction is over or no prediction, use infinity for sorting
-        if mnf_over or mnf_points_off is None:
-            mnf_points_off = float('inf')
-            
-        return (-wins, mnf_points_off)  # Negative wins for descending order
-        
-    standings_data.sort(key=sort_key)
-    
-    # Get weekly ranks history for season standings
-    season_standings = []
-    for user in users:
-        season_record = user.get_season_record()
-        season_percentage = (season_record['wins'] / season_record['total'] * 100) if season_record['total'] > 0 else 0
-        
-        # Get weekly ranks for sparkline
-        weekly_ranks = []
-        for w in range(1, current_week + 1):
-            week_record = user.get_weekly_record(w)
-            if week_record['total'] > 0:  # Only include weeks with picks
-                weekly_ranks.append(week_record['wins'])
-        
-        user_data = {
-            'id': user.id,
-            'username': user.username,
-            'season_wins': season_record['wins'],  # Store raw number for sorting
-            'season_correct': f"{season_record['wins']}/{season_record['total']}",
-            'season_percentage': season_percentage,
-            'weekly_ranks': weekly_ranks
-        }
-        season_standings.append(user_data)
-    
-    # Sort season standings by total wins
-    season_standings.sort(key=lambda x: (-x['season_wins']))
+    # Sort standings by weekly wins (descending) and username (ascending)
+    standings_data.sort(key=lambda x: (-x['weekly_correct'], x['username']))
+    season_standings = sorted(standings_data, key=lambda x: (-x['season_correct'], x['username']))
     
     return render_template('main/standings.html',
-                         current_week=selected_week,
-                         total_games=total_games,
                          standings=standings_data,
                          season_standings=season_standings,
-                         season_total=sum(1 for g in GameCache.query.all() if g.status == 'STATUS_FINAL'),
-                         nfl_teams={k.upper(): v for k, v in NFL_TEAMS.items()})
+                         week=selected_week,
+                         total_games=total_games)
 
 # Removed old make_picks route as it's been replaced by picks.picks
 

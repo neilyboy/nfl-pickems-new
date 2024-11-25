@@ -171,6 +171,11 @@ def submit_picks(week):
         if pick_key in request.form:
             team_picked = request.form[pick_key]
             
+            # Ensure we store the team abbreviation
+            home_team = game['home_team']['abbreviation']
+            away_team = game['away_team']['abbreviation']
+            team_picked = home_team if GameService.teams_match(team_picked, game['home_team']['display_name']) else away_team
+            
             # Check if pick already exists
             pick = Pick.query.filter_by(
                 user_id=target_user.id,
