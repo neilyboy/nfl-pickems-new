@@ -12,6 +12,11 @@ if [ ! -d "/app/migrations" ] || [ ! -f "/app/migrations/alembic.ini" ]; then
     flask db init || sudo -u root flask db init
 fi
 
+# Ensure instance directory exists and has correct permissions
+mkdir -p /app/instance
+chown -R app:app /app/instance
+chmod 777 /app/instance
+
 echo "Running database migrations..."
 flask db upgrade || sudo -u root flask db upgrade
 
