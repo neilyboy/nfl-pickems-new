@@ -16,17 +16,20 @@ services:
       - PYTHONPATH=/app
       - DATABASE_URL=sqlite:////app/instance/app.db
       - TZ=${TZ:-UTC}
-    restart: unless-stopped
+      - DOCKER_UID=${UID:-1000}
+      - DOCKER_GID=${GID:-1000}
+    restart: on-failure:5
     env_file:
       - .env
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    user: "${UID:-1000}:${GID:-1000}"
 
   nginx:
     image: nginx:stable-alpine
