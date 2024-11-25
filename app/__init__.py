@@ -69,8 +69,8 @@ def create_app(config_class=Config):
         return User.query.get(int(id))
 
     # Start background tasks
-    from app.tasks.game_updates import start_game_updates
-    start_game_updates()
+    from app.tasks.game_updates import init_game_updates
+    init_game_updates(app)
     
     return app
 

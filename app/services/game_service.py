@@ -53,7 +53,7 @@ class GameService:
             'SF': 'San Francisco 49ers',
             'TB': 'Tampa Bay Buccaneers',
             'TEN': 'Tennessee Titans',
-            'WSH': 'Washington Commanders'
+            'WAS': 'Washington Commanders'
         }
         
         name = team_name.strip().upper()

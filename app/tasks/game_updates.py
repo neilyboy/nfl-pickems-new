@@ -102,17 +102,25 @@ def update_mnf_games():
         except Exception as e:
             logger.error(f"Error in update_mnf_games: {str(e)}")
 
-def start_game_updates():
-    """Start the background game update thread."""
+def init_game_updates(app):
+    """Initialize the game updates background task with app context."""
     def update_loop():
-        while True:
-            try:
-                update_mnf_games()
-            except Exception as e:
-                logger.error(f"Error in update loop: {str(e)}")
-            # Wait 5 minutes before next update
-            time.sleep(300)
+        with app.app_context():
+            while True:
+                try:
+                    update_mnf_games()
+                except Exception as e:
+                    logger.error(f"Error in update loop: {str(e)}")
+                # Wait 5 minutes before next update
+                time.sleep(300)
     
     thread = threading.Thread(target=update_loop, daemon=True)
     thread.start()
     logger.info("Started MNF game update thread")
+
+def start_game_updates():
+    """
+    Deprecated: Use init_game_updates(app) instead.
+    This function remains for backward compatibility.
+    """
+    logger.warning("start_game_updates() is deprecated. Use init_game_updates(app) instead.")

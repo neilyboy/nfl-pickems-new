@@ -128,9 +128,5 @@ NFL_TEAMS = {
     'WAS': {
         'name': 'Washington Commanders',
         'logo': '/static/img/teams/was.png'
-    },
-    'WSH': {
-        'name': 'Washington Commanders',
-        'logo': '/static/img/teams/was.png'
     }
 }
