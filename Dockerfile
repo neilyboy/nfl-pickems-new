@@ -22,12 +22,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create migrations directory and set permissions
-RUN mkdir -p /app/migrations/versions && \
-    flask db init || true && \
-    chown -R app:app /app && \
+# Set permissions before switching to app user
+RUN chown -R app:app /app && \
     chmod +x /app/entrypoint.sh && \
-    chmod -R 777 /app/instance /app/migrations /app/migrations/versions
+    chmod -R 777 /app/instance && \
+    mkdir -p /app/migrations/versions && \
+    chown -R app:app /app/migrations && \
+    chmod -R 777 /app/migrations
 
 # Set environment variables
 ENV FLASK_APP=/app/app \

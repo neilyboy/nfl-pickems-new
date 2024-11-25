@@ -5,17 +5,12 @@ echo "Starting entrypoint script..."
 
 cd /app
 
-# Create and set permissions for required directories
-mkdir -p /app/instance
-chmod -R 777 /app/instance
-
 echo "Setting up database..."
 
 # Initialize database if it doesn't exist
 if [ ! -f "/app/instance/app.db" ]; then
     echo "Creating new database..."
     touch /app/instance/app.db
-    chmod 777 /app/instance/app.db
 fi
 
 # Initialize database with admin user if needed
