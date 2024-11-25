@@ -1,5 +1,8 @@
 FROM python:3.12-slim
 
+# Create app user
+RUN groupadd -r app && useradd -r -g app app
+
 WORKDIR /app
 
 # Install system dependencies
@@ -9,7 +12,6 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     zlib1g-dev \
     curl \
-    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
@@ -19,9 +21,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create necessary directories
+# Create necessary directories and set permissions
 RUN mkdir -p /app/instance /app/migrations && \
-    chmod 777 /app/instance /app/migrations
+    chown -R app:app /app
 
 # Ensure entrypoint is executable
 RUN chmod +x /app/entrypoint.sh
@@ -31,6 +33,9 @@ ENV FLASK_APP=app
 ENV FLASK_ENV=production
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
+
+# Switch to non-root user
+USER app
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
