@@ -5,7 +5,7 @@ services:
     build: .
     command: gunicorn -w 4 -b 0.0.0.0:8000 "app:create_app()"
     volumes:
-      - db-data:/app/instance
+      - ./instance:/app/instance
       - ./migrations:/app/migrations
       - ./app/static:/app/static
     expose:
@@ -17,6 +17,7 @@ services:
       - DATABASE_URL=sqlite:////app/instance/app.db
       - TZ=${TZ:-UTC}
       - INIT_DB=true
+    user: "${UID:-1000}:${GID:-1000}"
     restart: always
     env_file:
       - .env
@@ -50,8 +51,3 @@ services:
 networks:
   app-network:
     driver: bridge
-
-volumes:
-  db-data:
-    external: true
-    name: nfl-pickems-db
