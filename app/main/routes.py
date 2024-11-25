@@ -628,33 +628,42 @@ def force_update(week):
         # Force update games for the week
         current_app.logger.info(f"Forcing update of week {week} games...")
         games = ESPNApiService.get_week_games(week=week, season_type=2)
+        current_app.logger.info(f"Found {len(games)} games")
         
         # Update each game in the cache
         for game_data in games:
-            game = GameCache.query.filter_by(game_id=game_data.get('game_id')).first()
-            if game:
-                # Extract team data
-                home_team = game_data.get('home_team', {})
-                away_team = game_data.get('away_team', {})
-                
-                # Normalize team abbreviations
-                home_abbrev = get_team_abbrev(home_team.get('abbreviation', ''))
-                away_abbrev = get_team_abbrev(away_team.get('abbreviation', ''))
-                
-                # Update game data
-                game.data = json.dumps(game_data)
-                game.home_team = home_team.get('display_name')
-                game.away_team = away_team.get('display_name')
-                game.home_team_abbrev = home_abbrev.upper() if home_abbrev else home_team.get('abbreviation')
-                game.away_team_abbrev = away_abbrev.upper() if away_abbrev else away_team.get('abbreviation')
-                game.home_score = home_team.get('score', 0)
-                game.away_score = away_team.get('score', 0)
-                game.status = game_data.get('status')
-                game.winning_team = game_data.get('winning_team')
-                db.session.add(game)
+            try:
+                game = GameCache.query.filter_by(game_id=game_data.get('game_id')).first()
+                if game:
+                    current_app.logger.info(f"Updating game {game.game_id}: {game.away_team}@{game.home_team}")
+                    
+                    # Extract team data
+                    home_team = game_data.get('home_team', {})
+                    away_team = game_data.get('away_team', {})
+                    
+                    # Normalize team abbreviations
+                    home_abbrev = get_team_abbrev(home_team.get('abbreviation', ''))
+                    away_abbrev = get_team_abbrev(away_team.get('abbreviation', ''))
+                    
+                    # Update game data
+                    game.data = json.dumps(game_data)
+                    game.home_team = home_team.get('display_name')
+                    game.away_team = away_team.get('display_name')
+                    game.home_team_abbrev = home_abbrev.upper() if home_abbrev else home_team.get('abbreviation')
+                    game.away_team_abbrev = away_abbrev.upper() if away_abbrev else away_team.get('abbreviation')
+                    game.home_score = home_team.get('score', 0)
+                    game.away_score = away_team.get('score', 0)
+                    game.status = game_data.get('status')
+                    game.winning_team = game_data.get('winning_team')
+                    db.session.add(game)
+                    current_app.logger.info(f"Updated game status: {game.status}")
+            except Exception as e:
+                current_app.logger.error(f"Error updating game {game_data.get('game_id')}: {str(e)}")
+                continue
         
         try:
             db.session.commit()
+            current_app.logger.info("Successfully committed all game updates")
         except Exception as e:
             current_app.logger.error(f"Error committing game updates: {str(e)}")
             db.session.rollback()
@@ -664,10 +673,15 @@ def force_update(week):
         mnf_game = GameCache.query.filter_by(week=week, is_mnf=True).first()
         
         if mnf_game:
+            current_app.logger.info(f"Found MNF game: {mnf_game.game_id}")
+            current_app.logger.info(f"MNF Status: {mnf_game.status}")
+            current_app.logger.info(f"MNF Is Final: {mnf_game.is_final()}")
+            
             # Update MNF predictions if game is final
             if mnf_game.is_final():
                 actual_total = mnf_game.get_total_points()
                 if actual_total:
+                    current_app.logger.info(f"Updating MNF predictions with actual total: {actual_total}")
                     predictions = MNFPrediction.query.filter_by(week=week).all()
                     for pred in predictions:
                         if pred.actual_total is None:
