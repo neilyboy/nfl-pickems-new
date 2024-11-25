@@ -1,49 +1,44 @@
 FROM python:3.12-slim
 
-# Create app user
-RUN groupadd -r app && useradd -r -g app app
-
-WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    libjpeg-dev \
-    libpng-dev \
-    zlib1g-dev \
-    curl \
+# Install system dependencies including sudo
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     sudo \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Create app directory and set up app user
+RUN mkdir -p /app && \
+    groupadd -r app && \
+    useradd -r -g app -s /bin/bash -d /app app && \
+    chown -R app:app /app
+
+# Allow app user to use sudo for specific commands without password
+RUN echo "app ALL=(ALL) NOPASSWD: /usr/local/bin/flask" >> /etc/sudoers
+
+WORKDIR /app
+
+# Copy requirements first for better caching
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code first (as root)
+# Copy application code
 COPY . .
 
-# Initialize directories and set permissions
-ENV FLASK_APP=/app/app
-RUN mkdir -p /app/instance /app/migrations/versions && \
-    touch /app/instance/app.db && \
-    chown -R app:app /app && \
-    chmod -R 777 /app && \
-    chmod +x entrypoint.sh && \
-    # Allow app user to use sudo without password
-    echo "app ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+# Set permissions
+RUN chown -R app:app /app && \
+    chmod +x /app/entrypoint.sh
 
 # Set environment variables
-ENV FLASK_ENV=production
-ENV PYTHONPATH=/app
-ENV PYTHONUNBUFFERED=1
-ENV INIT_DB=true
+ENV FLASK_APP=/app/app \
+    FLASK_ENV=production \
+    PYTHONPATH=/app \
+    PYTHONUNBUFFERED=1
 
-# Switch to non-root user
+# Switch to app user
 USER app
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
+# Set entrypoint
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["gunicorn", "-w", "4", "--timeout", "120", "--keep-alive", "5", "--max-requests", "1000", "--max-requests-jitter", "50", "-b", "0.0.0.0:8000", "app:create_app()"]
+
+# Default command
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:create_app()"]
