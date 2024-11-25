@@ -208,6 +208,52 @@ def standings(week=None):
             'current_streak_type': 'win' if current_streak_is_win else 'loss' if current_streak_is_win is not None else None
         }
 
+    def calculate_upsets(user_id):
+        """Calculate upset picks (correctly picking against the majority)"""
+        picks = Pick.query.filter_by(user_id=user_id).all()
+        upset_picks = []
+        total_correct_upsets = 0
+        
+        for pick in picks:
+            if pick.is_correct:
+                # Get all picks for this game
+                game_picks = Pick.query.filter_by(game_id=pick.game_id).all()
+                if not game_picks:
+                    continue
+                
+                # Count picks for each team
+                team_counts = {}
+                for p in game_picks:
+                    team = p.team_picked.upper()
+                    team_counts[team] = team_counts.get(team, 0) + 1
+                
+                # Find the majority picked team
+                majority_team = max(team_counts.items(), key=lambda x: x[1])[0]
+                total_picks = sum(team_counts.values())
+                
+                # If user picked against majority (and won)
+                user_pick = pick.team_picked.upper()
+                if user_pick != majority_team:
+                    majority_percentage = (team_counts[majority_team] / total_picks) * 100
+                    # Only count as upset if at least 65% picked the other team
+                    if majority_percentage >= 65:
+                        total_correct_upsets += 1
+                        game = GameCache.query.filter_by(game_id=pick.game_id).first()
+                        upset_picks.append({
+                            'week': pick.week,
+                            'team': pick.team_picked,
+                            'opponent': game.away_team if pick.team_picked.upper() == game.home_team.upper() else game.home_team,
+                            'majority_pct': majority_percentage
+                        })
+        
+        # Sort by how heavily favored the other team was
+        upset_picks.sort(key=lambda x: x['majority_pct'], reverse=True)
+        
+        return {
+            'total_upsets': total_correct_upsets,
+            'upset_picks': upset_picks[:3]  # Top 3 biggest upsets
+        }
+
     for user in users:
         weekly_record = user.get_weekly_record(selected_week)
         season_record = user.get_season_record()
@@ -260,6 +306,11 @@ def standings(week=None):
         total_season_picks = season_record['total']
         season_percentage = (season_record['wins'] / total_season_picks * 100) if total_season_picks > 0 else 0
         
+        # Calculate streaks and upsets
+        streak_info = calculate_streaks(user.id)
+        upset_info = calculate_upsets(user.id)
+        team_stats = calculate_team_stats(user.id)
+        
         user_data = {
             'username': user.username,
             'weekly_correct': weekly_record['wins'],
@@ -271,9 +322,9 @@ def standings(week=None):
             'weekly_trend': weekly_trend,
             'picks': user_picks,
             'mnf_prediction': next((p.total_points for p in mnf_predictions if p.user_id == user.id), None),
-            # Add new statistics
-            'team_stats': calculate_team_stats(user.id),
-            'streaks': calculate_streaks(user.id)
+            'streak_info': streak_info,
+            'upset_info': upset_info,
+            'team_stats': team_stats
         }
         standings_data.append(user_data)
     
@@ -284,7 +335,8 @@ def standings(week=None):
     return render_template('main/standings.html',
                          standings=standings_data,
                          season_standings=season_standings,
-                         week=selected_week,
+                         current_week=current_week,
+                         selected_week=selected_week,
                          total_games=total_games)
 
 # Removed old make_picks route as it's been replaced by picks.picks

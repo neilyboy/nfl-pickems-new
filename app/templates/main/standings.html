@@ -4,16 +4,16 @@
 <div class="container fade-in">
     <!-- Week Navigation -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Week {{ current_week }} Standings</h2>
+        <h2 class="mb-0">Week {{ selected_week }} Standings</h2>
         <div class="btn-group">
-            {% if current_week > 1 %}
-            <a href="{{ url_for('main.standings', week=current_week-1) }}" class="btn btn-outline-primary">
-                <i class="fas fa-chevron-left me-1"></i>Week {{ current_week-1 }}
+            {% if selected_week > 1 %}
+            <a href="{{ url_for('main.standings', week=selected_week-1) }}" class="btn btn-outline-primary">
+                <i class="fas fa-chevron-left me-1"></i>Week {{ selected_week-1 }}
             </a>
             {% endif %}
-            {% if current_week < 18 %}
-            <a href="{{ url_for('main.standings', week=current_week+1) }}" class="btn btn-outline-primary">
-                Week {{ current_week+1 }}<i class="fas fa-chevron-right ms-1"></i>
+            {% if selected_week < current_week %}
+            <a href="{{ url_for('main.standings', week=selected_week+1) }}" class="btn btn-outline-primary">
+                Week {{ selected_week+1 }}<i class="fas fa-chevron-right ms-1"></i>
             </a>
             {% endif %}
         </div>
@@ -113,83 +113,111 @@
                     </div>
                     
                     <!-- New: Performance Analytics Section -->
-                    <div class="performance-analytics mt-1">
-                        <div class="row">
-                            <!-- Streaks -->
-                            <div class="col-md-6">
+                    <div class="performance-analytics">
+                        <div class="analytics-row">
+                            <!-- Performance Stats -->
+                            <div class="analytics-column">
                                 <div class="analytics-card">
                                     <h6 class="analytics-title">
-                                        <i class="fas fa-fire text-danger me-2"></i>Streaks
+                                        <i class="fas fa-chart-line me-2"></i>Performance Stats
                                     </h6>
                                     <div class="streak-stats">
                                         <div class="streak-item">
                                             <span class="streak-label">Current Streak</span>
-                                            <span class="streak-value {% if user.streaks.current_streak_type == 'win' %}text-success{% elif user.streaks.current_streak_type == 'loss' %}text-danger{% endif %}">
-                                                {{ user.streaks.current_streak }} {{ user.streaks.current_streak_type|title }}{{ 's' if user.streaks.current_streak != 1 }}
+                                            <span class="streak-value {% if user.streak_info.current_streak_type == 'win' %}text-success{% elif user.streak_info.current_streak_type == 'loss' %}text-danger{% endif %}">
+                                                {{ user.streak_info.current_streak }} {{ user.streak_info.current_streak_type }}{{ 's' if user.streak_info.current_streak != 1 }}
                                             </span>
                                         </div>
                                         <div class="streak-item">
-                                            <span class="streak-label">Best Streak</span>
-                                            <span class="streak-value text-success">{{ user.streaks.longest_win_streak }} Wins</span>
+                                            <span class="streak-label">Best Win Streak</span>
+                                            <span class="streak-value text-success">{{ user.streak_info.longest_win_streak }}</span>
                                         </div>
                                         <div class="streak-item">
-                                            <span class="streak-label">Worst Streak</span>
-                                            <span class="streak-value text-danger">{{ user.streaks.longest_loss_streak }} Losses</span>
+                                            <span class="streak-label">Worst Loss Streak</span>
+                                            <span class="streak-value text-danger">{{ user.streak_info.longest_loss_streak }}</span>
+                                        </div>
+                                        <div class="streak-item">
+                                            <span class="streak-label">Upset Picks</span>
+                                            <span class="streak-value text-warning">{{ user.upset_info.total_upsets }}</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- Best/Worst Teams -->
-                            <div class="col-md-6">
+
+                            <!-- Team Performance -->
+                            <div class="analytics-column">
                                 <div class="analytics-card">
-                                    <div class="row">
-                                        <!-- Best Teams -->
-                                        <div class="col-md-6">
-                                            <h6 class="analytics-title">
-                                                <i class="fas fa-star text-warning me-2"></i>Best Teams
-                                            </h6>
-                                            <div class="team-stats">
-                                                {% set team_stats = user.team_stats.items()|list %}
-                                                {% if team_stats %}
-                                                    {% set sorted_teams = team_stats|sort(attribute='1.success_rate', reverse=true) %}
-                                                    {% for team, stats in sorted_teams %}
-                                                        {% if loop.index <= 3 %}
-                                                        <div class="team-stat-item">
-                                                            <img src="/static/img/teams/{{ team|lower }}.png" alt="{{ team }}" class="team-logo-sm">
-                                                            <span class="team-stat-value">{{ "%.1f"|format(stats.success_rate) }}%</span>
-                                                            <span class="team-stat-detail">({{ stats.correct }}/{{ stats.total }})</span>
-                                                        </div>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                {% else %}
-                                                    <div class="text-muted">No team stats available</div>
-                                                {% endif %}
+                                    <h6 class="analytics-title">
+                                        <i class="fas fa-trophy me-2"></i>Best Teams
+                                    </h6>
+                                    <div class="team-stats">
+                                        {% set team_stats = user.team_stats.items()|list %}
+                                        {% if team_stats %}
+                                            {% set sorted_teams = team_stats|sort(attribute='1.success_rate', reverse=true) %}
+                                            {% for team, stats in sorted_teams[:3] %}
+                                                <div class="team-stat-item">
+                                                    <img src="{{ url_for('static', filename='img/teams/' + team|lower + '.png') }}" alt="{{ team }}" class="team-logo-sm">
+                                                    <span class="team-stat-value text-success">{{ "%.1f"|format(stats.success_rate) }}%</span>
+                                                    <span class="team-stat-detail">({{ stats.correct }}/{{ stats.total }})</span>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="team-stat-item">
+                                                <span class="team-stat-detail text-muted">No team stats available</span>
                                             </div>
-                                        </div>
-                                        <!-- Worst Teams -->
-                                        <div class="col-md-6">
-                                            <h6 class="analytics-title">
-                                                <i class="fas fa-thumbs-down text-danger me-2"></i>Worst Teams
-                                            </h6>
-                                            <div class="team-stats">
-                                                {% set team_stats = user.team_stats.items()|list %}
-                                                {% if team_stats %}
-                                                    {% set sorted_teams = team_stats|sort(attribute='1.success_rate') %}
-                                                    {% for team, stats in sorted_teams %}
-                                                        {% if loop.index <= 3 and stats.total >= 3 %}
-                                                        <div class="team-stat-item">
-                                                            <img src="/static/img/teams/{{ team|lower }}.png" alt="{{ team }}" class="team-logo-sm">
-                                                            <span class="team-stat-value">{{ "%.1f"|format(stats.success_rate) }}%</span>
-                                                            <span class="team-stat-detail">({{ stats.correct }}/{{ stats.total }})</span>
-                                                        </div>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                {% else %}
-                                                    <div class="text-muted">No team stats available</div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <h6 class="analytics-title mt-3">
+                                        <i class="fas fa-thumbs-down me-2"></i>Worst Teams
+                                    </h6>
+                                    <div class="team-stats">
+                                        {% set team_stats = user.team_stats.items()|list %}
+                                        {% if team_stats %}
+                                            {% set sorted_teams = team_stats|sort(attribute='1.success_rate') %}
+                                            {% set worst_teams = [] %}
+                                            {% for team, stats in sorted_teams %}
+                                                {% if stats.total >= 3 %}
+                                                    {% if worst_teams|length < 3 %}
+                                                        {% set _ = worst_teams.append((team, stats)) %}
+                                                    {% endif %}
                                                 {% endif %}
+                                            {% endfor %}
+                                            {% for team, stats in worst_teams %}
+                                                <div class="team-stat-item">
+                                                    <img src="{{ url_for('static', filename='img/teams/' + team|lower + '.png') }}" alt="{{ team }}" class="team-logo-sm">
+                                                    <span class="team-stat-value text-danger">{{ "%.1f"|format(stats.success_rate) }}%</span>
+                                                    <span class="team-stat-detail">({{ stats.correct }}/{{ stats.total }})</span>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="team-stat-item">
+                                                <span class="team-stat-detail text-muted">No team stats available</span>
                                             </div>
-                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Upset Picks -->
+                            <div class="analytics-column">
+                                <div class="analytics-card">
+                                    <h6 class="analytics-title">
+                                        <i class="fas fa-bolt me-2"></i>Top Upset Picks
+                                    </h6>
+                                    <div class="team-stats">
+                                        {% if user.upset_info.upset_picks %}
+                                            {% for upset in user.upset_info.upset_picks %}
+                                            <div class="team-stat-item">
+                                                <span class="team-stat-value text-warning">{{ "%.0f"|format(upset.majority_pct) }}%</span>
+                                                <span class="team-stat-detail">Week {{ upset.week }}: {{ upset.team }} def. {{ upset.opponent }}</span>
+                                            </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="team-stat-item">
+                                                <span class="team-stat-detail text-muted">No upset picks yet</span>
+                                            </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -208,7 +236,7 @@
     .standings-grid {
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 0.75rem;
     }
 
     .user-card {
@@ -218,237 +246,114 @@
         width: 100%;
         max-width: 1200px;
         margin: 0 auto;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: transform 0.2s ease;
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    .user-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        background: rgba(255, 255, 255, 0.08);
-    }
-
-    .stats-group {
-        display: flex;
-        gap: 1.5rem;
-        align-items: center;
-        margin-left: 1.5rem;
-    }
-
-    .stat-item {
-        font-size: 0.95rem;
-        color: rgba(255, 255, 255, 0.95);
-        white-space: nowrap;
-    }
-
-    .rank-badge {
-        background: rgba(255, 255, 255, 0.1);
-        color: rgba(255, 255, 255, 0.9);
-        border-radius: 50%;
-        width: 28px;
-        height: 28px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.9rem;
-        font-weight: 600;
-    }
-
-    .rank-badge-1 {
-        background: linear-gradient(45deg, #FFD700, #FFA500);
-        color: #000;
-    }
-
-    .rank-badge-2 {
-        background: linear-gradient(45deg, #C0C0C0, #A9A9A9);
-        color: #000;
-    }
-
-    .rank-badge-3 {
-        background: linear-gradient(45deg, #CD7F32, #8B4513);
-        color: #fff;
-    }
-
-    .picks-container {
-        margin-top: 0.5rem;
-        display: flex;
-        justify-content: flex-start;
-        overflow-x: auto;
-        -ms-overflow-style: none;  /* Hide scrollbar for IE and Edge */
-        scrollbar-width: none;  /* Hide scrollbar for Firefox */
-    }
-
-    /* Hide scrollbar for Chrome, Safari and Opera */
-    .picks-container::-webkit-scrollbar {
-        display: none;
-    }
-
-    .picks-container .d-flex {
-        gap: 0.5rem;
-        flex-wrap: nowrap;
-    }
-
-    .pick-circle-lg {
-        flex-shrink: 0;  /* Prevent logos from shrinking */
-    }
-
-    /* Card header alignment */
-    .user-card .d-flex.align-items-center.justify-content-between {
-        padding: 0 0.5rem;
-    }
-
-    .pick-circle-lg {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        background: var(--bg-card);
-        border: 2px solid rgba(255, 255, 255, 0.1);
-        transition: all 0.2s ease;
-        margin-right: 4px;
-    }
-
-    .pick-circle-lg img {
-        width: 40px;
-        height: 40px;
-        object-fit: contain;
-        transition: transform 0.2s ease;
-    }
-
-    .pick-circle-lg:hover img {
-        transform: scale(1.1);
-    }
-
-    /* Result indicators */
-    .pick-circle-lg.pick-win {
-        background: rgba(40, 167, 69, 0.15);
-        border-color: rgba(40, 167, 69, 0.3);
-    }
-
-    .pick-circle-lg.pick-loss {
-        background: rgba(220, 53, 69, 0.15);
-        border-color: rgba(220, 53, 69, 0.3);
-    }
-
-    .pick-circle-lg.pick-pending {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .progress {
-        background-color: rgba(255, 255, 255, 0.1);
-        border-radius: 4px;
-        overflow: hidden;
-    }
-
-    .progress-bar {
-        transition: width 1s ease;
-    }
-
-    .stat-value {
-        font-family: 'Roboto Mono', monospace;
-        font-weight: 500;
-    }
-
     .performance-analytics {
-        margin-top: 1rem;
-        padding-top: 1rem;
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .analytics-row {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .analytics-column {
+        flex: 1;
+        min-width: 0; /* Prevents flex items from overflowing */
     }
 
     .analytics-card {
         background: rgba(255, 255, 255, 0.03);
-        border-radius: 8px;
+        border-radius: 6px;
         padding: 0.75rem;
         height: 100%;
-        margin-bottom: 0.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .analytics-title {
         font-size: 0.85rem;
         color: rgba(255, 255, 255, 0.9);
         margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         display: flex;
         align-items: center;
     }
 
-    .streak-stats {
+    .streak-stats, .team-stats {
         display: flex;
         flex-direction: column;
-        gap: 0.25rem;
+        gap: 0.4rem;
     }
 
-    .streak-item {
+    .streak-item, .team-stat-item {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        padding: 0.15rem 0;
+        padding: 0.35rem;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.02);
+        transition: background-color 0.2s ease;
+    }
+
+    .streak-item:hover, .team-stat-item:hover {
+        background: rgba(255, 255, 255, 0.05);
     }
 
     .streak-label {
         color: rgba(255, 255, 255, 0.7);
-        font-size: 0.85rem;
+        font-size: 0.8rem;
+        flex: 1;
     }
 
     .streak-value {
         font-family: 'Roboto Mono', monospace;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         font-weight: 500;
-    }
-
-    .team-stats {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-
-    .team-stat-item {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.25rem;
-        border-radius: 4px;
-        background: rgba(255, 255, 255, 0.05);
-        font-size: 0.85rem;
-    }
-
-    .team-stat-item:hover {
-        background: rgba(255, 255, 255, 0.1);
+        min-width: 3rem;
+        text-align: right;
     }
 
     .team-logo-sm {
         width: 20px;
         height: 20px;
         object-fit: contain;
+        margin-right: 0.5rem;
     }
 
     .team-stat-value {
         font-family: 'Roboto Mono', monospace;
         font-weight: 500;
-        color: rgba(255, 255, 255, 0.9);
-        min-width: 45px;
+        font-size: 0.8rem;
+        min-width: 3rem;
+        text-align: right;
+        margin-right: 0.5rem;
     }
 
     .team-stat-detail {
         font-size: 0.8rem;
         color: rgba(255, 255, 255, 0.6);
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .upset-picks {
+        margin-top: 0.75rem;
     }
 
     @media (max-width: 768px) {
-        .user-card {
-            padding: 8px;
-        }
-        
-        .performance-analytics {
-            margin-top: 0.5rem;
-            padding-top: 0.5rem;
+        .analytics-row {
+            flex-direction: column;
         }
         
         .analytics-card {
-            padding: 0.5rem;
+            margin-bottom: 0.75rem;
         }
     }
 </style>
