@@ -22,8 +22,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create necessary directories and set permissions
-RUN mkdir -p /app/instance /app/migrations && \
-    chown -R app:app /app
+RUN mkdir -p /app/instance /app/migrations/versions && \
+    chown -R app:app /app && \
+    chmod -R 777 /app/instance /app/migrations
 
 # Ensure entrypoint is executable
 RUN chmod +x /app/entrypoint.sh
