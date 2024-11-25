@@ -5,7 +5,7 @@ services:
     build: .
     command: gunicorn -w 4 -b 0.0.0.0:8000 "app:create_app()"
     volumes:
-      - nfl-pickems_app-data:/app/instance
+      - db-data:/app/instance
       - ./migrations:/app/migrations
       - ./app/static:/app/static
     expose:
@@ -52,6 +52,6 @@ networks:
     driver: bridge
 
 volumes:
-  nfl-pickems_app-data:
-    driver: local
-    name: nfl-pickems_app-data
+  db-data:
+    external: true
+    name: nfl-pickems-db
