@@ -262,6 +262,20 @@ class ESPNApiService:
         return None
 
     @staticmethod
+    def normalize_team_abbrev(abbrev):
+        """Normalize team abbreviations to our standard format."""
+        if not abbrev:
+            return abbrev
+            
+        abbrev = abbrev.upper()
+        # Map ESPN abbreviations to our standard ones
+        abbrev_map = {
+            'WSH': 'WAS',  # Washington
+            'JAC': 'JAX',  # Jacksonville
+        }
+        return abbrev_map.get(abbrev, abbrev)
+
+    @staticmethod
     def parse_game_data(event):
         """Parse game data from ESPN API event."""
         try:
@@ -276,6 +290,10 @@ class ESPNApiService:
             home_team_data = home_team.get('team', {})
             away_team_data = away_team.get('team', {})
             
+            # Normalize team abbreviations
+            home_abbrev = ESPNApiService.normalize_team_abbrev(home_team_data.get('abbreviation', ''))
+            away_abbrev = ESPNApiService.normalize_team_abbrev(away_team_data.get('abbreviation', ''))
+            
             # Get scores
             try:
                 home_score = int(home_team.get('score', 0))
@@ -289,6 +307,12 @@ class ESPNApiService:
             
             # Get winner for final games
             winner = ESPNApiService.determine_winner(event)
+            if winner:
+                # Normalize the winner's team name if it matches either team
+                if winner == home_team_data.get('displayName'):
+                    winner = home_team_data.get('displayName')
+                elif winner == away_team_data.get('displayName'):
+                    winner = away_team_data.get('displayName')
             
             # Build game data
             try:
@@ -386,13 +410,13 @@ class ESPNApiService:
                 'home_team': {
                     'id': str(home_team_data.get('id', '')),
                     'display_name': home_team_data.get('displayName', ''),
-                    'abbreviation': home_team_data.get('abbreviation', ''),
+                    'abbreviation': home_abbrev,
                     'score': home_score
                 },
                 'away_team': {
                     'id': str(away_team_data.get('id', '')),
                     'display_name': away_team_data.get('displayName', ''),
-                    'abbreviation': away_team_data.get('abbreviation', ''),
+                    'abbreviation': away_abbrev,
                     'score': away_score
                 },
                 'venue': {
