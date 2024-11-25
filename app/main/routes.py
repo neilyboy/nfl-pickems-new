@@ -317,10 +317,18 @@ def standings(week=None):
                     if majority_percentage >= 65:
                         total_correct_upsets += 1
                         game = GameCache.query.filter_by(game_id=pick.game_id).first()
+                        
+                        # Get proper team names for display
+                        picked_team_abbrev = get_team_abbrev(pick.team_picked.upper())
+                        if game.home_team.upper() == pick.team_picked.upper():
+                            opponent_abbrev = get_team_abbrev(game.away_team.upper())
+                        else:
+                            opponent_abbrev = get_team_abbrev(game.home_team.upper())
+                            
                         upset_picks.append({
                             'week': pick.week,
-                            'team': pick.team_picked,
-                            'opponent': game.away_team if pick.team_picked.upper() == game.home_team.upper() else game.home_team,
+                            'team': picked_team_abbrev.upper(),
+                            'opponent': opponent_abbrev.upper(),
                             'majority_pct': majority_percentage
                         })
         
