@@ -3,10 +3,19 @@ set -e
 
 echo "Starting entrypoint script..."
 
+# Create instance directory if it doesn't exist
+mkdir -p /app/instance
+chmod 777 /app/instance
+
+# Create migrations directory if it doesn't exist
+mkdir -p /app/migrations/versions
+chmod 777 /app/migrations /app/migrations/versions
+
 # Initialize database if it doesn't exist
 if [ ! -f /app/instance/app.db ]; then
     echo "Creating new database..."
     touch /app/instance/app.db
+    chmod 666 /app/instance/app.db
     export INIT_DB=true
 fi
 
