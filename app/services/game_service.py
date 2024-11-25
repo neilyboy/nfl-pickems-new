@@ -388,68 +388,84 @@ class GameService:
         try:
             logger.info(f"Updating {len(games)} games in cache")
             for game_data in games:
-                # Try to find existing game
-                existing_game = GameCache.query.filter_by(game_id=game_data['game_id']).first()
-                
-                # Get winner if game is final
-                winning_team = game_data.get('winning_team')
-                game_status = game_data.get('status', '')
-                
-                logger.info(f"Processing game {game_data['game_id']}: {game_data['away_team']['display_name']} @ {game_data['home_team']['display_name']}")
-                logger.info(f"Status: {game_status}, Winner: {winning_team}")
-                
-                if existing_game:
-                    # Log current state
-                    logger.info(f"Existing game found - Current state: status={existing_game.status}, winner={existing_game.winning_team}")
+                try:
+                    # Try to find existing game
+                    existing_game = GameCache.query.filter_by(game_id=game_data['game_id']).first()
                     
-                    # Update existing game
-                    existing_game.data = json.dumps(game_data)
-                    existing_game.status = game_status
-                    existing_game.winning_team = winning_team
-                    existing_game.home_team = game_data['home_team']['display_name']
-                    existing_game.away_team = game_data['away_team']['display_name']
-                    existing_game.home_team_abbrev = game_data['home_team']['abbreviation']
-                    existing_game.away_team_abbrev = game_data['away_team']['abbreviation']
-                    existing_game.home_score = game_data['home_team']['score']
-                    existing_game.away_score = game_data['away_team']['score']
-                    existing_game.last_updated = datetime.now(timezone.utc)
+                    # Parse datetime properly
+                    try:
+                        start_time = datetime.fromisoformat(game_data['date'].replace('Z', '+00:00'))
+                    except (ValueError, KeyError) as e:
+                        logger.error(f"Error parsing date for game {game_data['game_id']}: {e}")
+                        continue
                     
-                    # Update picks if game just finished
-                    if existing_game.is_final():
-                        logger.info(f"Updating picks for finished game {game_data['game_id']}")
-                        GameService.update_pick_results(existing_game)
-                else:
-                    logger.info(f"Creating new game record for {game_data['game_id']}")
-                    # Create new game
-                    new_game = GameCache(
-                        week=game_data['week'],
-                        season_type=game_data['season_type'],
-                        year=game_data['year'],
-                        game_id=game_data['game_id'],
-                        data=json.dumps(game_data),
-                        status=game_status,
-                        winning_team=winning_team,
-                        home_team=game_data['home_team']['display_name'],
-                        away_team=game_data['away_team']['display_name'],
-                        home_team_abbrev=game_data['home_team']['abbreviation'],
-                        away_team_abbrev=game_data['away_team']['abbreviation'],
-                        home_score=game_data['home_team']['score'],
-                        away_score=game_data['away_team']['score'],
-                        start_time=datetime.fromisoformat(game_data['date']),
-                        is_mnf=game_data.get('is_mnf', False),
-                        venue_name=game_data['venue']['name'],
-                        venue_city=game_data['venue']['city'],
-                        venue_state=game_data['venue']['state']
-                    )
-                    db.session.add(new_game)
+                    # Get winner if game is final
+                    winning_team = game_data.get('winning_team')
+                    game_status = game_data.get('status', '')
                     
-                    # Update picks if game is final
-                    if new_game.is_final():
-                        logger.info(f"Updating picks for new finished game {game_data['game_id']}")
-                        db.session.flush()  # Ensure new_game has an ID
-                        GameService.update_pick_results(new_game)
+                    logger.info(f"Processing game {game_data['game_id']}: {game_data['away_team']['display_name']} @ {game_data['home_team']['display_name']}")
+                    logger.info(f"Status: {game_status}, Winner: {winning_team}")
+                    
+                    if existing_game:
+                        # Update existing game
+                        existing_game.status = game_status
+                        existing_game.winning_team = winning_team
+                        existing_game.home_team = game_data['home_team']['display_name']
+                        existing_game.away_team = game_data['away_team']['display_name']
+                        existing_game.home_team_abbrev = game_data['home_team']['abbreviation']
+                        existing_game.away_team_abbrev = game_data['away_team']['abbreviation']
+                        existing_game.home_score = game_data['home_team'].get('score', 0)
+                        existing_game.away_score = game_data['away_team'].get('score', 0)
+                        existing_game.start_time = start_time
+                        existing_game.is_mnf = game_data.get('is_mnf', False)
+                        existing_game.venue_name = game_data['venue'].get('name')
+                        existing_game.venue_city = game_data['venue'].get('city')
+                        existing_game.venue_state = game_data['venue'].get('state')
+                        existing_game.last_updated = datetime.now(timezone.utc)
+                        existing_game.data = json.dumps(game_data)
+                        
+                        # Update picks if game just finished
+                        if existing_game.is_final():
+                            logger.info(f"Updating picks for finished game {game_data['game_id']}")
+                            GameService.update_pick_results(existing_game)
+                    else:
+                        logger.info(f"Creating new game record for {game_data['game_id']}")
+                        # Create new game
+                        new_game = GameCache(
+                            week=game_data['week'],
+                            season_type=game_data['season_type'],
+                            year=game_data['year'],
+                            game_id=game_data['game_id'],
+                            status=game_status,
+                            winning_team=winning_team,
+                            home_team=game_data['home_team']['display_name'],
+                            away_team=game_data['away_team']['display_name'],
+                            home_team_abbrev=game_data['home_team']['abbreviation'],
+                            away_team_abbrev=game_data['away_team']['abbreviation'],
+                            home_score=game_data['home_team'].get('score', 0),
+                            away_score=game_data['away_team'].get('score', 0),
+                            start_time=start_time,
+                            is_mnf=game_data.get('is_mnf', False),
+                            venue_name=game_data['venue'].get('name'),
+                            venue_city=game_data['venue'].get('city'),
+                            venue_state=game_data['venue'].get('state'),
+                            data=json.dumps(game_data),
+                            last_updated=datetime.now(timezone.utc)
+                        )
+                        db.session.add(new_game)
+                        
+                        # Update picks if game is final
+                        if new_game.is_final():
+                            logger.info(f"Updating picks for new finished game {game_data['game_id']}")
+                            db.session.flush()  # Ensure new_game has an ID
+                            GameService.update_pick_results(new_game)
+                            
+                except Exception as e:
+                    logger.error(f"Error processing game {game_data.get('game_id', 'unknown')}: {str(e)}")
+                    continue
             
             db.session.commit()
+            logger.info("Successfully updated game cache")
             
         except Exception as e:
             db.session.rollback()

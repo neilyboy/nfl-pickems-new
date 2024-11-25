@@ -171,16 +171,26 @@ async function handleResponse(response) {
     const contentType = response.headers.get('content-type');
     console.log('Content type:', contentType);
     
-    // Try to get the response text first
-    const text = await response.text();
-    console.log('Response text:', text);
-    
-    try {
-        const data = JSON.parse(text);
-        if (!response.ok) {
+    if (!response.ok) {
+        // For error responses, try to parse as JSON
+        const text = await response.text();
+        try {
+            const data = JSON.parse(text);
             throw new Error(data.error || 'Unknown error occurred');
+        } catch (e) {
+            throw new Error(text || 'Unknown error occurred');
         }
-        return data;
+    }
+    
+    // If content type is not JSON, return the response directly
+    if (!contentType || !contentType.includes('application/json')) {
+        return response;
+    }
+    
+    // Try to parse JSON response
+    const text = await response.text();
+    try {
+        return JSON.parse(text);
     } catch (e) {
         console.error('JSON parse error:', e);
         throw new Error('Failed to parse response: ' + text.substring(0, 100));
@@ -240,7 +250,14 @@ function backupDatabase() {
     .then(handleResponse)
     .then(response => {
         if (response.download_url) {
-            window.location.href = response.download_url;
+            // Create a hidden link and click it to trigger the download
+            const link = document.createElement('a');
+            link.href = response.download_url;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showMessage('Database backup started!');
         }
     })
     .catch(error => {
