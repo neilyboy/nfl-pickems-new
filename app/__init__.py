@@ -68,6 +68,10 @@ def create_app(config_class=Config):
         from app.models import User
         return User.query.get(int(id))
 
+    # Start background tasks
+    from app.tasks.game_updates import start_game_updates
+    start_game_updates()
+    
     return app
 
 from app import models

@@ -440,6 +440,35 @@ body {
     color: white;
 }
 
+/* MNF Prediction Styles */
+.mnf-prediction {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mnf-prediction .actual-total {
+    font-weight: 600;
+    font-size: 1.1em;
+}
+
+.mnf-prediction .prediction {
+    font-size: 0.95em;
+    opacity: 0.9;
+}
+
+.mnf-prediction .prediction.text-danger {
+    color: #dc3545 !important;
+}
+
+.mnf-prediction .prediction.text-success {
+    color: #198754 !important;
+}
+
+.mnf-prediction .prediction-only {
+    font-weight: 500;
+}
+
 /* Headings */
 h1, h2, h3, h4, h5, h6 {
     color: var(--text-primary) !important;

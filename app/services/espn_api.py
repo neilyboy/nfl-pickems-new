@@ -8,17 +8,58 @@ logger = logging.getLogger(__name__)
 
 class ESPNApiService:
     BASE_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl"
+    ALT_URL = "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl"
     
     @staticmethod
     def get_current_nfl_week() -> Dict:
         """Get the current NFL week information"""
         try:
             logger.info("Fetching current NFL week from ESPN API...")
-            response = requests.get(f"{ESPNApiService.BASE_URL}/scoreboard")
-            data = response.json()
+            params = {
+                'lang': 'en',
+                'region': 'us',
+                'calendartype': 'blacklist',
+                'limit': 100
+            }
             
-            # Log the raw response for debugging
-            logger.debug(f"ESPN API Response: {data}")
+            # Try both URLs with proper error handling
+            urls = [
+                f"{ESPNApiService.ALT_URL}/scoreboard",
+                f"{ESPNApiService.BASE_URL}/scoreboard"
+            ]
+            
+            data = None
+            last_error = None
+            
+            for url in urls:
+                try:
+                    logger.info(f"Trying URL: {url}")
+                    response = requests.get(url, params=params, timeout=5)  # shorter timeout for current week
+                    response.raise_for_status()
+                    data = response.json()
+                    if data:
+                        logger.info(f"Successfully fetched data from {url}")
+                        break
+                except requests.exceptions.Timeout:
+                    last_error = "ESPN API request timed out"
+                    logger.error(f"{last_error} for {url}")
+                    continue
+                except requests.exceptions.RequestException as e:
+                    last_error = f"ESPN API request failed: {str(e)}"
+                    logger.error(f"{last_error} for {url}")
+                    continue
+                except ValueError as e:
+                    last_error = f"Failed to parse ESPN API response as JSON: {str(e)}"
+                    logger.error(f"{last_error} for {url}")
+                    continue
+            
+            if not data:
+                logger.error("Failed to fetch data from all URLs, using default week info")
+                return {
+                    'week': 12,  # Current week as of Nov 24, 2023
+                    'season_type': 2,  # Regular season
+                    'year': datetime.now().year
+                }
             
             # Check if we're in the offseason
             calendar = data.get('leagues', [{}])[0].get('calendar', [])
@@ -42,7 +83,7 @@ class ESPNApiService:
                 }
             
             week_info = {
-                'week': data.get('week', {}).get('number', 1),
+                'week': data.get('week', {}).get('number', 12),  # Default to current week if not found
                 'season_type': current_season_type,
                 'year': data.get('season', {}).get('year', datetime.now().year)
             }
@@ -52,8 +93,12 @@ class ESPNApiService:
             
         except Exception as e:
             logger.error(f"Error fetching current NFL week: {str(e)}")
-            # Default to week 1 of regular season if there's an error
-            return {'week': 1, 'season_type': 2, 'year': datetime.now().year}
+            # Default to current week if there's an error
+            return {
+                'week': 12,  # Current week as of Nov 24, 2023
+                'season_type': 2,
+                'year': datetime.now().year
+            }
 
     @staticmethod
     def get_week_games(week: int, season_type: int = 2, year: Optional[int] = None) -> List[Dict]:
@@ -63,7 +108,7 @@ class ESPNApiService:
         Args:
             week: Week number (1-18 for regular season)
             season_type: 1=preseason, 2=regular season, 3=postseason
-            year: NFL season year (e.g., 2023 for the 2023-24 season)
+            year: NFL season year (e.g., 2024 for the 2024-25 season)
         """
         if not year:
             year = datetime.now().year
@@ -71,23 +116,68 @@ class ESPNApiService:
         try:
             logger.info(f"Fetching games for week {week}, season_type {season_type}, year {year}")
             params = {
-                'week': week,
+                'lang': 'en',
+                'region': 'us',
+                'calendartype': 'blacklist',
+                'limit': 100,
                 'seasontype': season_type,
-                'year': year
+                'week': week,
+                'dates': year
             }
-            response = requests.get(f"{ESPNApiService.BASE_URL}/scoreboard", params=params)
-            data = response.json()
+            
+            # Try both URLs with proper error handling
+            urls = [
+                f"{ESPNApiService.ALT_URL}/scoreboard",
+                f"{ESPNApiService.BASE_URL}/scoreboard"
+            ]
+            
+            data = None
+            last_error = None
+            
+            for url in urls:
+                try:
+                    logger.info(f"Trying URL: {url}")
+                    response = requests.get(url, params=params, timeout=10)
+                    response.raise_for_status()
+                    data = response.json()
+                    if data and data.get('events'):
+                        logger.info(f"Successfully fetched data from {url}")
+                        break
+                except requests.exceptions.Timeout:
+                    last_error = "ESPN API request timed out"
+                    logger.error(f"{last_error} for {url}")
+                    continue
+                except requests.exceptions.RequestException as e:
+                    last_error = f"ESPN API request failed: {str(e)}"
+                    logger.error(f"{last_error} for {url}")
+                    continue
+                except ValueError as e:
+                    last_error = f"Failed to parse ESPN API response as JSON: {str(e)}"
+                    logger.error(f"{last_error} for {url}")
+                    continue
+            
+            if not data:
+                logger.error("Failed to fetch data from all URLs")
+                if last_error:
+                    logger.error(f"Last error: {last_error}")
+                return []
             
             # Log the raw response for debugging
-            logger.debug(f"ESPN API Response: {data}")
+            logger.info(f"Raw response data: {data}")
             
             games = []
             events = data.get('events', [])
             logger.info(f"Found {len(events)} games")
             
             for event in events:
-                game_data = ESPNApiService.parse_game_data(event)
-                games.append(game_data)
+                try:
+                    game_data = ESPNApiService.parse_game_data(event)
+                    if game_data:  # Only add if we successfully parsed the game
+                        games.append(game_data)
+                        logger.info(f"Successfully parsed game: {game_data.get('game_id')} - {game_data.get('home_team', {}).get('display_name')} vs {game_data.get('away_team', {}).get('display_name')}")
+                except Exception as e:
+                    logger.error(f"Error parsing game data for event {event.get('id', 'unknown')}: {str(e)}")
+                    continue
             
             return games
             
@@ -204,18 +294,23 @@ class ESPNApiService:
             try:
                 # Parse the date string and ensure it's timezone aware
                 date_str = event.get('date', '')
+                logger.info(f"Raw date string from ESPN: {date_str}")
+                
                 if date_str:
                     # Add UTC timezone if not present
                     if not date_str.endswith('Z') and not '+' in date_str and not '-' in date_str:
                         date_str += 'Z'
                     game_date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                    logger.info(f"Parsed UTC game date: {game_date}")
                     
                     # Convert to Central Time for MNF detection
                     local_tz = tz.gettz('America/Chicago')
                     local_date = game_date.astimezone(local_tz)
+                    logger.info(f"Local (CT) game date: {local_date}")
                 else:
                     game_date = datetime.now(tz=tz.tzutc())
                     local_date = game_date.astimezone(tz.gettz('America/Chicago'))
+                    logger.info(f"No date string found, using current time: {local_date}")
 
                 # If the game date is more than 6 months in the future, it's probably a next season game
                 # Adjust the year to the current year
@@ -223,23 +318,63 @@ class ESPNApiService:
                     current_year = datetime.now().year
                     game_date = game_date.replace(year=current_year)
                     local_date = local_date.replace(year=current_year)
+                    logger.info(f"Adjusted year to current year: {local_date}")
             
                 is_monday = local_date.weekday() == 0  # Monday is 0
-                is_mnf = is_monday and ('Monday Night Football' in event.get('name', '') or 
-                                      'Monday Night' in event.get('name', '') or
-                                      local_date.hour >= 19)  # 7 PM CT or later
-            
-                # Debug logging for MNF detection
-                logger.info(f"Game: {event.get('name', '')}")
-                logger.info(f"UTC Date: {game_date}, Local Date: {local_date}")
-                logger.info(f"Is Monday: {is_monday}, Local Hour: {local_date.hour}")
-                logger.info(f"Is MNF: {is_mnf}")
+                is_evening = local_date.hour >= 18  # After 6 PM CT
+                
+                logger.info(f"Game day checks - Is Monday: {is_monday}, Is Evening: {is_evening}")
+                
+                # Enhanced MNF detection
+                is_mnf = False
+                if is_monday:
+                    # Check various MNF indicators
+                    name_indicators = [
+                        'monday night football' in event.get('name', '').lower(),
+                        'monday night' in event.get('name', '').lower(),
+                        'mnf' in event.get('name', '').lower()
+                    ]
+                    
+                    note_indicators = [
+                        any('monday night' in note.get('headline', '').lower() 
+                            for note in event.get('notes', [])),
+                        any('mnf' in note.get('headline', '').lower() 
+                            for note in event.get('notes', []))
+                    ]
+                    
+                    broadcast_indicators = [
+                        any('espn' in network.get('name', '').lower() 
+                            for network in competition.get('broadcasts', [])),
+                        any('monday night' in broadcast.get('name', '').lower() 
+                            for broadcast in competition.get('broadcasts', []))
+                    ]
+                    
+                    # Log all indicators
+                    logger.info("MNF Detection Indicators:")
+                    logger.info(f"  Game Name: {event.get('name', '')}")
+                    logger.info(f"  Name Indicators: {name_indicators}")
+                    logger.info(f"  Notes: {event.get('notes', [])}")
+                    logger.info(f"  Note Indicators: {note_indicators}")
+                    logger.info(f"  Broadcasts: {competition.get('broadcasts', [])}")
+                    logger.info(f"  Broadcast Indicators: {broadcast_indicators}")
+                    
+                    # If it's Monday evening, it's likely MNF
+                    if is_evening:
+                        is_mnf = True
+                        logger.info("Setting is_mnf=True because it's a Monday evening game")
+                    # Or if we have other strong indicators
+                    elif any(name_indicators) or any(note_indicators) or any(broadcast_indicators):
+                        is_mnf = True
+                        logger.info("Setting is_mnf=True because of name/note/broadcast indicators")
+                    
+                    logger.info(f"Final MNF Status: {is_mnf}")
+                    
             except (ValueError, TypeError) as e:
                 logger.error(f"Error parsing game date: {e}")
                 game_date = datetime.now(tz=tz.tzutc())
                 local_date = game_date.astimezone(tz.gettz('America/Chicago'))
                 is_mnf = False
-        
+            
             game_data = {
                 'game_id': str(event['id']),
                 'week': event.get('week', {}).get('number', 0),
@@ -266,14 +401,15 @@ class ESPNApiService:
                     'state': venue.get('address', {}).get('state', '')
                 },
                 'is_mnf': is_mnf,
-                'game_time': local_date.strftime('%a %I:%M %p')  # Include day abbreviation
+                'game_time': local_date.strftime('%a %I:%M %p').replace(' 0', ' ')  # e.g., "Mon 7:15 PM"
             }
             
+            logger.info(f"Parsed game data: {game_data}")
             return game_data
-        
+            
         except Exception as e:
             logger.error(f"Error parsing game data: {str(e)}")
-            raise
+            return {}
 
     @staticmethod
     def get_team_schedule(team_id: str, season_type: int = 2, year: Optional[int] = None) -> List[Dict]:
@@ -282,8 +418,20 @@ class ESPNApiService:
             year = datetime.now().year
             
         try:
-            response = requests.get(f"{ESPNApiService.BASE_URL}/teams/{team_id}/schedule")
-            data = response.json()
+            try:
+                response = requests.get(f"{ESPNApiService.BASE_URL}/teams/{team_id}/schedule", 
+                                     timeout=10)  # 10 second timeout
+                response.raise_for_status()  # Raise an error for bad status codes
+                data = response.json()
+            except requests.exceptions.Timeout:
+                logger.error("ESPN API request timed out")
+                return []
+            except requests.exceptions.RequestException as e:
+                logger.error(f"ESPN API request failed: {str(e)}")
+                return []
+            except ValueError as e:
+                logger.error(f"Failed to parse ESPN API response as JSON: {str(e)}")
+                return []
             
             games = []
             for event in data.get('events', []):

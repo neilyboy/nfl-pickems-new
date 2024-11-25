@@ -46,9 +46,28 @@
                             <span class="stat-item" data-bs-toggle="tooltip" title="Pick Percentage">
                                 <i class="fas fa-percentage text-info me-1"></i>{{ "%.1f"|format(user.weekly_percentage) }}%
                             </span>
+                            {% if user.mnf_prediction is not none %}
+                                <span class="stat-item mnf-prediction" data-bs-toggle="tooltip" 
+                                      title="MNF Total Points{% if user.mnf_game_final %} - Final Score: {{ user.mnf_actual }}{% if user.mnf_points_off %} ({% if user.mnf_is_over %}+{% else %}-{% endif %}{{ user.mnf_points_off }}){% endif %}{% else %} - Prediction: {{ user.mnf_prediction }}{% endif %}">
+                                    <i class="fas fa-football-ball text-primary me-1"></i>
+                                    {% if user.mnf_game_final %}
+                                        <span class="actual-total me-1">{{ user.mnf_actual }}</span>
+                                        <span class="prediction {% if user.mnf_is_over %}text-danger{% else %}text-success{% endif %}">
+                                            ({{ user.mnf_prediction }})
+                                        </span>
+                                    {% else %}
+                                        <span class="prediction">{{ user.mnf_prediction }}</span>
+                                    {% endif %}
+                                </span>
+                            {% endif %}
                             {% if user.mnf_prediction %}
-                                <span class="stat-item" data-bs-toggle="tooltip" title="MNF Points Prediction">
-                                    <i class="fas fa-football-ball text-primary me-1"></i>{{ user.mnf_prediction }}
+                                <span class="d-none">
+                                    MNF Debug: 
+                                    Prediction: {{ user.mnf_prediction }}, 
+                                    Actual: {{ user.mnf_actual }}, 
+                                    Final: {{ user.mnf_game_final }}, 
+                                    Points Off: {{ user.mnf_points_off }}, 
+                                    Is Over: {{ user.mnf_is_over }}
                                 </span>
                             {% endif %}
                         </div>

@@ -82,6 +82,10 @@ class GameCache(db.Model):
             return self.home_score + self.away_score
         return None
 
+    def is_mnf_game(self):
+        """Check if this is a Monday Night Football game."""
+        return bool(self.is_mnf)
+
     def __repr__(self):
         return f'<GameCache Week:{self.week} {self.away_team}@{self.home_team}>'
 
