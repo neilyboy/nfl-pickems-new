@@ -1,5 +1,5 @@
 import os
-from flask import Flask, redirect, url_for
+from flask import Flask, redirect, url_for, jsonify
 from config import Config
 from app.extensions import db, login, migrate, csrf
 from app.scheduler import init_scheduler
@@ -40,6 +40,11 @@ def create_app(config_class=Config):
         """Inject current week into all templates."""
         current_week = GameService.get_current_nfl_week()['week']
         return dict(current_week=current_week)
+
+    @app.route('/health')
+    def health_check():
+        """Health check endpoint for Docker."""
+        return jsonify({'status': 'healthy'}), 200
 
     @app.route('/')
     def index():
