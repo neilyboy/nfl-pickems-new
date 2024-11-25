@@ -3,12 +3,6 @@ set -e
 
 echo "Starting entrypoint script..."
 
-# Create instance directory if it doesn't exist
-mkdir -p /app/instance
-
-# Create migrations directory if it doesn't exist
-mkdir -p /app/migrations/versions
-
 # Initialize database if it doesn't exist
 if [ ! -f /app/instance/app.db ]; then
     echo "Creating new database..."

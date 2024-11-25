@@ -18,16 +18,15 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
+# Create necessary directories with proper permissions before copying app code
+RUN mkdir -p /app/instance /app/migrations/versions && \
+    chown -R app:app /app && \
+    chmod -R 777 /app/instance && \
+    chmod -R 777 /app/migrations
 
-# Create necessary directories
-RUN mkdir -p /app/instance /app/migrations/versions
-
-# Set permissions
-RUN chown -R app:app /app && \
-    chmod -R 777 /app/instance /app/migrations && \
-    chmod +x /app/entrypoint.sh
+# Copy application code and fix permissions
+COPY --chown=app:app . .
+RUN chmod +x /app/entrypoint.sh
 
 # Set environment variables
 ENV FLASK_APP=app
