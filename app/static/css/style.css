@@ -385,6 +385,8 @@ body {
     gap: 0.5rem;
     flex-wrap: wrap;
     margin-top: 0.5rem;
+    align-items: center;
+    justify-content: center;
 }
 
 .team-logo-standings {
@@ -557,13 +559,14 @@ label, .form-label, .form-text {
     }
     
     .pick-circle-lg {
-        width: 40px;  /* Slightly smaller on mobile */
-        height: 40px;
-        border-width: 3px;  /* Thicker border for better visibility */
+        width: 45px;
+        height: 45px;
+        border-width: 3px;
+        margin: 0.25rem;
     }
     
     .pick-win {
-        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.3);  /* More pronounced shadow */
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.3);
     }
     
     .pick-loss {
@@ -575,7 +578,9 @@ label, .form-label, .form-text {
     }
     
     .picks-container {
-        gap: 0.35rem;  /* Slightly tighter spacing on mobile */
+        gap: 0.5rem;
+        padding: 0.5rem;
+        justify-content: center;
     }
 }
 
