@@ -7,13 +7,16 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app directory and set up app user
-RUN mkdir -p /app/instance && \
+RUN mkdir -p /app/instance /app/migrations/versions && \
     groupadd -r app && \
     useradd -r -g app -s /bin/bash -d /app app && \
     chown -R app:app /app
 
 # Allow app user to use sudo for specific commands without password
-RUN echo "app ALL=(ALL) NOPASSWD: /usr/local/bin/flask" >> /etc/sudoers
+RUN echo "app ALL=(ALL) NOPASSWD: /usr/local/bin/flask" >> /etc/sudoers && \
+    echo "app ALL=(ALL) NOPASSWD: /bin/chown" >> /etc/sudoers && \
+    echo "app ALL=(ALL) NOPASSWD: /bin/chmod" >> /etc/sudoers && \
+    echo "app ALL=(ALL) NOPASSWD: /bin/mkdir" >> /etc/sudoers
 
 WORKDIR /app
 
@@ -27,7 +30,7 @@ COPY . .
 # Set permissions
 RUN chown -R app:app /app && \
     chmod +x /app/entrypoint.sh && \
-    chmod 777 /app/instance
+    chmod -R 777 /app/instance /app/migrations
 
 # Set environment variables
 ENV FLASK_APP=/app/app \
