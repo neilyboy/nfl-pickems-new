@@ -11,6 +11,7 @@ from app import db
 from functools import wraps
 from app.data.nfl_teams import NFL_TEAMS
 from app.services.espn_api import ESPNApiService
+from app.services.game_service import GameService
 import os
 import json
 from dateutil import tz
@@ -627,47 +628,8 @@ def force_update(week):
     try:
         # Force update games for the week
         current_app.logger.info(f"Forcing update of week {week} games...")
-        games = ESPNApiService.get_week_games(week=week, season_type=2)
+        games = GameService.update_week_games(week=week, force=True)
         current_app.logger.info(f"Found {len(games)} games")
-        
-        # Update each game in the cache
-        for game_data in games:
-            try:
-                game = GameCache.query.filter_by(game_id=game_data.get('game_id')).first()
-                if game:
-                    current_app.logger.info(f"Updating game {game.game_id}: {game.away_team}@{game.home_team}")
-                    
-                    # Extract team data
-                    home_team = game_data.get('home_team', {})
-                    away_team = game_data.get('away_team', {})
-                    
-                    # Normalize team abbreviations
-                    home_abbrev = get_team_abbrev(home_team.get('abbreviation', ''))
-                    away_abbrev = get_team_abbrev(away_team.get('abbreviation', ''))
-                    
-                    # Update game data
-                    game.data = json.dumps(game_data)
-                    game.home_team = home_team.get('display_name')
-                    game.away_team = away_team.get('display_name')
-                    game.home_team_abbrev = home_abbrev.upper() if home_abbrev else home_team.get('abbreviation')
-                    game.away_team_abbrev = away_abbrev.upper() if away_abbrev else away_team.get('abbreviation')
-                    game.home_score = home_team.get('score', 0)
-                    game.away_score = away_team.get('score', 0)
-                    game.status = game_data.get('status')
-                    game.winning_team = game_data.get('winning_team')
-                    db.session.add(game)
-                    current_app.logger.info(f"Updated game status: {game.status}")
-            except Exception as e:
-                current_app.logger.error(f"Error updating game {game_data.get('game_id')}: {str(e)}")
-                continue
-        
-        try:
-            db.session.commit()
-            current_app.logger.info("Successfully committed all game updates")
-        except Exception as e:
-            current_app.logger.error(f"Error committing game updates: {str(e)}")
-            db.session.rollback()
-            raise
         
         # Get MNF game
         mnf_game = GameCache.query.filter_by(week=week, is_mnf=True).first()
