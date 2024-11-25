@@ -10,13 +10,11 @@ RUN apt-get update && \
 RUN mkdir -p /app/instance /app/migrations/versions && \
     groupadd -r app && \
     useradd -r -g app -s /bin/bash -d /app app && \
-    chown -R app:app /app
+    chown -R app:app /app && \
+    chmod -R 777 /app/instance /app/migrations
 
-# Allow app user to use sudo for specific commands without password
-RUN echo "app ALL=(ALL) NOPASSWD: /usr/local/bin/flask" >> /etc/sudoers && \
-    echo "app ALL=(ALL) NOPASSWD: /bin/chown" >> /etc/sudoers && \
-    echo "app ALL=(ALL) NOPASSWD: /bin/chmod" >> /etc/sudoers && \
-    echo "app ALL=(ALL) NOPASSWD: /bin/mkdir" >> /etc/sudoers
+# Allow app user to use sudo for flask commands
+RUN echo "app ALL=(ALL) NOPASSWD: /usr/local/bin/flask" >> /etc/sudoers
 
 WORKDIR /app
 
@@ -29,8 +27,7 @@ COPY . .
 
 # Set permissions
 RUN chown -R app:app /app && \
-    chmod +x /app/entrypoint.sh && \
-    chmod -R 777 /app/instance /app/migrations
+    chmod +x /app/entrypoint.sh
 
 # Set environment variables
 ENV FLASK_APP=/app/app \

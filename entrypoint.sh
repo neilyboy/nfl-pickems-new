@@ -8,25 +8,19 @@ cd /app
 # Initialize migrations if they don't exist
 if [ ! -d "/app/migrations" ] || [ ! -f "/app/migrations/alembic.ini" ]; then
     echo "Initializing migrations..."
-    # Try to init migrations
-    flask db init || sudo -u root flask db init
+    flask db init || sudo flask db init
 fi
 
-# Ensure instance directory exists and has correct permissions
-mkdir -p /app/instance
-chown -R app:app /app/instance
-chmod 777 /app/instance
-
 echo "Running database migrations..."
-flask db upgrade || sudo -u root flask db upgrade
+flask db upgrade || sudo flask db upgrade
 
 if [ "$INIT_DB" = "true" ]; then
     echo "Initializing database with admin user..."
-    flask init-db || sudo -u root flask init-db
+    flask init-db || sudo flask init-db
 fi
 
 echo "Ensuring admin user exists..."
-flask ensure-admin || sudo -u root flask ensure-admin
+flask ensure-admin || sudo flask ensure-admin
 
 echo "Entrypoint script completed. Starting application..."
 
