@@ -3,7 +3,7 @@ version: '3.8'
 services:
   web:
     build: .
-    command: gunicorn -w 4 -b 0.0.0.0:8000 "app:create_app()"
+    command: gunicorn -w 4 -b 0.0.0.0:8000 "app:create_app()" --log-level debug
     volumes:
       - ./instance:/app/instance
       - ./migrations:/app/migrations
@@ -13,6 +13,7 @@ services:
     environment:
       - FLASK_APP=app
       - FLASK_ENV=production
+      - FLASK_DEBUG=1
       - PYTHONPATH=/app
       - DATABASE_URL=sqlite:////app/instance/app.db
       - TZ=${TZ:-UTC}
