@@ -111,6 +111,90 @@
                             </span>
                         </div>
                     </div>
+                    
+                    <!-- New: Performance Analytics Section -->
+                    <div class="performance-analytics mt-1">
+                        <div class="row">
+                            <!-- Streaks -->
+                            <div class="col-md-6">
+                                <div class="analytics-card">
+                                    <h6 class="analytics-title">
+                                        <i class="fas fa-fire text-danger me-2"></i>Streaks
+                                    </h6>
+                                    <div class="streak-stats">
+                                        <div class="streak-item">
+                                            <span class="streak-label">Current Streak</span>
+                                            <span class="streak-value {% if user.streaks.current_streak_type == 'win' %}text-success{% elif user.streaks.current_streak_type == 'loss' %}text-danger{% endif %}">
+                                                {{ user.streaks.current_streak }} {{ user.streaks.current_streak_type|title }}{{ 's' if user.streaks.current_streak != 1 }}
+                                            </span>
+                                        </div>
+                                        <div class="streak-item">
+                                            <span class="streak-label">Best Streak</span>
+                                            <span class="streak-value text-success">{{ user.streaks.longest_win_streak }} Wins</span>
+                                        </div>
+                                        <div class="streak-item">
+                                            <span class="streak-label">Worst Streak</span>
+                                            <span class="streak-value text-danger">{{ user.streaks.longest_loss_streak }} Losses</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Best/Worst Teams -->
+                            <div class="col-md-6">
+                                <div class="analytics-card">
+                                    <div class="row">
+                                        <!-- Best Teams -->
+                                        <div class="col-md-6">
+                                            <h6 class="analytics-title">
+                                                <i class="fas fa-star text-warning me-2"></i>Best Teams
+                                            </h6>
+                                            <div class="team-stats">
+                                                {% set team_stats = user.team_stats.items()|list %}
+                                                {% if team_stats %}
+                                                    {% set sorted_teams = team_stats|sort(attribute='1.success_rate', reverse=true) %}
+                                                    {% for team, stats in sorted_teams %}
+                                                        {% if loop.index <= 3 %}
+                                                        <div class="team-stat-item">
+                                                            <img src="/static/img/teams/{{ team|lower }}.png" alt="{{ team }}" class="team-logo-sm">
+                                                            <span class="team-stat-value">{{ "%.1f"|format(stats.success_rate) }}%</span>
+                                                            <span class="team-stat-detail">({{ stats.correct }}/{{ stats.total }})</span>
+                                                        </div>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <div class="text-muted">No team stats available</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <!-- Worst Teams -->
+                                        <div class="col-md-6">
+                                            <h6 class="analytics-title">
+                                                <i class="fas fa-thumbs-down text-danger me-2"></i>Worst Teams
+                                            </h6>
+                                            <div class="team-stats">
+                                                {% set team_stats = user.team_stats.items()|list %}
+                                                {% if team_stats %}
+                                                    {% set sorted_teams = team_stats|sort(attribute='1.success_rate') %}
+                                                    {% for team, stats in sorted_teams %}
+                                                        {% if loop.index <= 3 and stats.total >= 3 %}
+                                                        <div class="team-stat-item">
+                                                            <img src="/static/img/teams/{{ team|lower }}.png" alt="{{ team }}" class="team-logo-sm">
+                                                            <span class="team-stat-value">{{ "%.1f"|format(stats.success_rate) }}%</span>
+                                                            <span class="team-stat-detail">({{ stats.correct }}/{{ stats.total }})</span>
+                                                        </div>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <div class="text-muted">No team stats available</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 {% endfor %}
             </div>
@@ -131,7 +215,8 @@
         background: rgba(255, 255, 255, 0.05);
         border-radius: 8px;
         padding: 12px;
-        max-width: fit-content;
+        width: 100%;
+        max-width: 1200px;
         margin: 0 auto;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -266,6 +351,105 @@
     .stat-value {
         font-family: 'Roboto Mono', monospace;
         font-weight: 500;
+    }
+
+    .performance-analytics {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .analytics-card {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        padding: 0.75rem;
+        height: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .analytics-title {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.9);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .streak-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .streak-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.15rem 0;
+    }
+
+    .streak-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.85rem;
+    }
+
+    .streak-value {
+        font-family: 'Roboto Mono', monospace;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .team-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .team-stat-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.25rem;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.05);
+        font-size: 0.85rem;
+    }
+
+    .team-stat-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .team-logo-sm {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+    }
+
+    .team-stat-value {
+        font-family: 'Roboto Mono', monospace;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.9);
+        min-width: 45px;
+    }
+
+    .team-stat-detail {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    @media (max-width: 768px) {
+        .user-card {
+            padding: 8px;
+        }
+        
+        .performance-analytics {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+        }
+        
+        .analytics-card {
+            padding: 0.5rem;
+        }
     }
 </style>
 {% endblock %}

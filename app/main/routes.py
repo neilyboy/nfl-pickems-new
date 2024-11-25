@@ -4,7 +4,7 @@ from app.models.user import User
 from app.models.pick import Pick, MNFPrediction
 from app.models.game import GameCache
 from app.utils.espn_api import get_current_week, get_week_games, get_mnf_games
-from collections import defaultdict
+from collections import defaultdict, Counter
 from flask_login import login_required, current_user
 from datetime import datetime
 from app import db
@@ -125,6 +125,89 @@ def standings(week=None):
     standings_data = []
     season_standings = []
     
+    def calculate_team_stats(user_id):
+        """Calculate success rate for each team picked by the user"""
+        team_stats = defaultdict(lambda: {'correct': 0, 'total': 0})
+        
+        # Get all picks for the user
+        picks = Pick.query.filter_by(user_id=user_id).all()
+        
+        for pick in picks:
+            if pick.is_correct is not None:  # Only count decided games
+                team = pick.team_picked.strip().upper()
+                team_stats[team]['total'] += 1
+                if pick.is_correct:
+                    team_stats[team]['correct'] += 1
+        
+        # Calculate success rates
+        team_success_rates = {}
+        for team, stats in team_stats.items():
+            if stats['total'] >= 3:  # Only include teams picked at least 3 times
+                success_rate = (stats['correct'] / stats['total']) * 100
+                team_success_rates[team] = {
+                    'success_rate': success_rate,
+                    'correct': stats['correct'],
+                    'total': stats['total']
+                }
+        
+        return team_success_rates
+
+    def calculate_streaks(user_id):
+        """Calculate streak information including current streak"""
+        picks = Pick.query.filter_by(user_id=user_id).order_by(Pick.week.asc()).all()
+        
+        current_streak = 0
+        longest_win_streak = 0
+        longest_loss_streak = 0
+        current_streak_type = None
+        
+        # Track the current streak separately
+        current_streak_count = 0
+        current_streak_is_win = None
+        last_pick = None
+        
+        for pick in picks:
+            if pick.is_correct is None:
+                continue
+                
+            # Update historical longest streaks
+            if current_streak_type is None:
+                current_streak_type = pick.is_correct
+                current_streak = 1
+            elif pick.is_correct == current_streak_type:
+                current_streak += 1
+            else:
+                if current_streak_type:  # Was a win streak
+                    longest_win_streak = max(longest_win_streak, current_streak)
+                else:  # Was a loss streak
+                    longest_loss_streak = max(longest_loss_streak, current_streak)
+                current_streak_type = pick.is_correct
+                current_streak = 1
+            
+            # Update current streak
+            if last_pick is None or pick.is_correct == current_streak_is_win:
+                current_streak_count += 1
+                current_streak_is_win = pick.is_correct
+            else:
+                current_streak_count = 1
+                current_streak_is_win = pick.is_correct
+            
+            last_pick = pick
+        
+        # Check final historical streak
+        if current_streak_type is not None:
+            if current_streak_type:
+                longest_win_streak = max(longest_win_streak, current_streak)
+            else:
+                longest_loss_streak = max(longest_loss_streak, current_streak)
+        
+        return {
+            'longest_win_streak': longest_win_streak,
+            'longest_loss_streak': longest_loss_streak,
+            'current_streak': current_streak_count,
+            'current_streak_type': 'win' if current_streak_is_win else 'loss' if current_streak_is_win is not None else None
+        }
+
     for user in users:
         weekly_record = user.get_weekly_record(selected_week)
         season_record = user.get_season_record()
@@ -187,7 +270,10 @@ def standings(week=None):
             'season_percentage': season_percentage,
             'weekly_trend': weekly_trend,
             'picks': user_picks,
-            'mnf_prediction': next((p.total_points for p in mnf_predictions if p.user_id == user.id), None)
+            'mnf_prediction': next((p.total_points for p in mnf_predictions if p.user_id == user.id), None),
+            # Add new statistics
+            'team_stats': calculate_team_stats(user.id),
+            'streaks': calculate_streaks(user.id)
         }
         standings_data.append(user_data)
     
