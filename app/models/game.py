@@ -44,15 +44,21 @@ class GameCache(db.Model):
         if not self.status:
             return False
         status_lower = self.status.lower()
-        return (
-            status_lower == 'status_final' or
-            status_lower == 'final' or 
-            status_lower == 'final ot' or
-            'final' in status_lower or
-            status_lower == 'post' or  # Some games show as "Post" when final
-            status_lower == 'postponed' or  # Handle postponed games
-            status_lower == 'canceled'  # Handle canceled games
-        )
+        
+        # First check exact status matches
+        if status_lower in {'final', 'final ot', 'status_final', 'post', 'postponed', 'canceled'}:
+            return True
+        
+        # Then check if contains 'final'    
+        if 'final' in status_lower:
+            return True
+            
+        # Finally check if game has started and completed
+        if self.start_time and datetime.utcnow() > self.start_time:
+            if self.home_score is not None and self.away_score is not None:
+                return not self.is_in_progress()
+                
+        return False
 
     def get_winner(self):
         """Get the winning team based on score."""
@@ -74,7 +80,25 @@ class GameCache(db.Model):
 
     def is_in_progress(self):
         """Check if game is in progress."""
-        return self.status.lower() in ['in progress', 'halftime']
+        if not self.status:
+            return False
+            
+        in_progress_statuses = {
+            'in progress',
+            'halftime',
+            '1st quarter',
+            '2nd quarter',
+            '3rd quarter',
+            '4th quarter',
+            'overtime'
+        }
+        
+        status_lower = self.status.lower()
+        return (
+            status_lower in in_progress_statuses or
+            'quarter' in status_lower or
+            'overtime' in status_lower
+        )
 
     def get_total_points(self):
         """Get total points scored in the game."""
