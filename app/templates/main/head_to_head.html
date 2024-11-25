@@ -120,18 +120,26 @@
                             <td class="user-picks">
                                 {% for game in week.games %}
                                 <div class="pick-item {% if game.winner == game.user1_pick %}correct{% elif game.winner %}incorrect{% endif %}">
-                                    <img src="{{ url_for('static', filename='img/teams/' + game.user1_pick + '.png') }}" 
-                                         alt="{{ game.user1_pick }}" class="team-logo">
+                                    {% if game.user1_pick %}
+                                    <img src="{{ url_for('static', filename='img/teams/' + game.user1_pick|lower + '.png') }}" 
+                                         alt="{{ game.user1_pick|upper }}" class="team-logo">
                                     <span>{{ game.user1_pick|upper }}</span>
+                                    {% else %}
+                                    <span class="text-muted">No Pick</span>
+                                    {% endif %}
                                 </div>
                                 {% endfor %}
                             </td>
                             <td class="user-picks">
                                 {% for game in week.games %}
                                 <div class="pick-item {% if game.winner == game.user2_pick %}correct{% elif game.winner %}incorrect{% endif %}">
-                                    <img src="{{ url_for('static', filename='img/teams/' + game.user2_pick + '.png') }}" 
-                                         alt="{{ game.user2_pick }}" class="team-logo">
+                                    {% if game.user2_pick %}
+                                    <img src="{{ url_for('static', filename='img/teams/' + game.user2_pick|lower + '.png') }}" 
+                                         alt="{{ game.user2_pick|upper }}" class="team-logo">
                                     <span>{{ game.user2_pick|upper }}</span>
+                                    {% else %}
+                                    <span class="text-muted">No Pick</span>
+                                    {% endif %}
                                 </div>
                                 {% endfor %}
                             </td>
@@ -139,8 +147,8 @@
                                 {% for game in week.games %}
                                 <div class="pick-item">
                                     {% if game.winner %}
-                                    <img src="{{ url_for('static', filename='img/teams/' + game.winner + '.png') }}" 
-                                         alt="{{ game.winner }}" class="team-logo">
+                                    <img src="{{ url_for('static', filename='img/teams/' + game.winner|lower + '.png') }}" 
+                                         alt="{{ game.winner|upper }}" class="team-logo">
                                     <span>{{ game.winner|upper }}</span>
                                     {% else %}
                                     <span class="text-muted">TBD</span>

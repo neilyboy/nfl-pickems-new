@@ -399,24 +399,35 @@ def head_to_head():
             # Get winner if game is finished
             winner = None
             if game.home_score is not None and game.away_score is not None:
-                winner = game.home_team if game.home_score > game.away_score else game.away_team
-                # Convert winner to abbreviation for logo
-                winner = get_team_abbrev(winner)
+                # Use stored team abbreviations instead of converting full names
+                winner_team = game.home_team_abbrev if game.home_score > game.away_score else game.away_team_abbrev
+                winner = winner_team.lower() if winner_team else None
             
-            if pick1.team_picked != pick2.team_picked:
+            # Get and validate picks - ensure abbreviations are lowercase
+            user1_abbrev = get_team_abbrev(pick1.team_picked) if pick1 and pick1.team_picked else None
+            user2_abbrev = get_team_abbrev(pick2.team_picked) if pick2 and pick2.team_picked else None
+            
+            user1_pick = user1_abbrev.lower() if user1_abbrev else None
+            user2_pick = user2_abbrev.lower() if user2_abbrev else None
+            
+            # Skip if either pick is missing
+            if not user1_pick or not user2_pick:
+                continue
+            
+            if user1_pick != user2_pick:
                 stats['different_picks'] += 1
                 different_picks += 1
                 
                 # If game is finished, update head-to-head record
                 if winner:
-                    if get_team_abbrev(pick1.team_picked) == winner:
+                    if user1_pick == winner:
                         stats['head_to_head'][user1.id] += 1
                     else:
                         stats['head_to_head'][user2.id] += 1
             
             week_games.append({
-                'user1_pick': get_team_abbrev(pick1.team_picked),
-                'user2_pick': get_team_abbrev(pick2.team_picked),
+                'user1_pick': user1_pick,
+                'user2_pick': user2_pick,
                 'winner': winner
             })
         
