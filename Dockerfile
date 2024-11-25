@@ -18,18 +18,19 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create necessary directories and files with proper permissions before copying app code
+# Copy application code first (as root)
+COPY . .
+
+# Initialize database and migrations as root
+ENV FLASK_APP=/app/app
 RUN mkdir -p /app/instance /app/migrations/versions && \
     touch /app/instance/app.db && \
+    flask db init && \
     chown -R app:app /app && \
-    chmod -R 777 /app
-
-# Copy application code and fix permissions
-COPY --chown=app:app . .
-RUN chmod +x entrypoint.sh
+    chmod -R 777 /app && \
+    chmod +x entrypoint.sh
 
 # Set environment variables
-ENV FLASK_APP=app
 ENV FLASK_ENV=production
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
