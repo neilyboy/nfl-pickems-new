@@ -13,6 +13,7 @@ import shutil
 from datetime import datetime
 import logging
 from functools import wraps
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -103,10 +104,28 @@ def restore_db():
         backup_dir = os.path.join(current_app.root_path, '..', 'backups')
         os.makedirs(backup_dir, exist_ok=True)
         backup_file = os.path.join(backup_dir, f'pre_restore_backup_{timestamp}.db')
-        shutil.copy2(db_path, backup_file)
+        if os.path.exists(db_path):
+            shutil.copy2(db_path, backup_file)
 
         # Save the uploaded file as the new database
         file.save(db_path)
+        
+        # Close current connections
+        db.session.remove()
+        db.engine.dispose()
+
+        # Reconnect and ensure schema is up to date
+        with current_app.app_context():
+            db.create_all()
+            try:
+                # Force reload of game cache to ensure proper datetime handling
+                for game in GameCache.query.all():
+                    if game.data and isinstance(game.data, str):
+                        game.data = json.loads(game.data)
+                db.session.commit()
+            except Exception as e:
+                logger.error(f"Error updating game cache: {str(e)}")
+                # Continue even if update fails
 
         return jsonify({'message': 'Database restored successfully'})
 
