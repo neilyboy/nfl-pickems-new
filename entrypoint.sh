@@ -3,13 +3,6 @@ set -e
 
 echo "Starting entrypoint script..."
 
-# Initialize database if it doesn't exist
-if [ ! -f /app/instance/app.db ]; then
-    echo "Creating new database..."
-    touch /app/instance/app.db
-    export INIT_DB=true
-fi
-
 # Initialize migrations if they don't exist
 if [ ! -f /app/migrations/alembic.ini ]; then
     echo "Initializing database migrations..."

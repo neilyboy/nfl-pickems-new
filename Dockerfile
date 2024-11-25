@@ -18,8 +18,9 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create necessary directories with proper permissions before copying app code
+# Create necessary directories and files with proper permissions before copying app code
 RUN mkdir -p /app/instance /app/migrations/versions && \
+    touch /app/instance/app.db && \
     chown -R app:app /app && \
     chmod -R 777 /app/instance && \
     chmod -R 777 /app/migrations
@@ -33,6 +34,7 @@ ENV FLASK_APP=app
 ENV FLASK_ENV=production
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
+ENV INIT_DB=true
 
 # Switch to non-root user
 USER app
