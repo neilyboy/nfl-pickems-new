@@ -11,8 +11,8 @@ if [ ! -d "/app/migrations" ] || [ ! -f "/app/migrations/alembic.ini" ]; then
     # Try to init migrations
     if ! flask db init; then
         echo "Failed to initialize migrations, trying as root..."
-        # If it fails, try as root
-        su -c "flask db init" root
+        # If it fails, try as root using sudo
+        sudo flask db init
     fi
 fi
 

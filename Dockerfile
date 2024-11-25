@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     zlib1g-dev \
     curl \
+    sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
@@ -28,8 +29,8 @@ RUN mkdir -p /app/instance /app/migrations/versions && \
     chown -R app:app /app && \
     chmod -R 777 /app && \
     chmod +x entrypoint.sh && \
-    # Allow app user to use sudo for flask db init
-    echo "app ALL=(ALL) NOPASSWD: /usr/local/bin/flask db init" >> /etc/sudoers
+    # Allow app user to use sudo without password
+    echo "app ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # Set environment variables
 ENV FLASK_ENV=production
