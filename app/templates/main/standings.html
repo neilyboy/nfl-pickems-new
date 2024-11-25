@@ -229,7 +229,13 @@
                                             {% for upset in user.upset_info.upset_picks %}
                                             <div class="team-stat-item">
                                                 <span class="team-stat-value text-warning">{{ "%.0f"|format(upset.majority_pct) }}%</span>
-                                                <span class="team-stat-detail">Week {{ upset.week }}: {{ upset.team }} def. {{ upset.opponent }}</span>
+                                                <span class="team-stat-detail">
+                                                    Week {{ upset.week }}:
+                                                    <img src="{{ upset.team_logo }}" alt="{{ upset.team }}" class="team-logo-sm">
+                                                    {{ upset.team }} def.
+                                                    <img src="{{ upset.opponent_logo }}" alt="{{ upset.opponent }}" class="team-logo-sm">
+                                                    {{ upset.opponent }}
+                                                </span>
                                             </div>
                                             {% endfor %}
                                         {% else %}

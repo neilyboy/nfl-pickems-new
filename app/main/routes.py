@@ -299,6 +299,11 @@ def standings(week=None):
                 if not game_picks:
                     continue
                 
+                # Get the game details
+                game = GameCache.query.filter_by(game_id=pick.game_id).first()
+                if not game:
+                    continue
+
                 # Count picks for each team
                 team_counts = {}
                 for p in game_picks:
@@ -316,21 +321,25 @@ def standings(week=None):
                     # Only count as upset if at least 65% picked the other team
                     if majority_percentage >= 65:
                         total_correct_upsets += 1
-                        game = GameCache.query.filter_by(game_id=pick.game_id).first()
                         
-                        # Get proper team names for display
+                        # Get proper team names and determine opponent
                         picked_team_abbrev = get_team_abbrev(pick.team_picked.upper())
+                        
+                        # Determine the actual opponent (the team they played against, not picked)
                         if game.home_team.upper() == pick.team_picked.upper():
                             opponent_abbrev = get_team_abbrev(game.away_team.upper())
                         else:
                             opponent_abbrev = get_team_abbrev(game.home_team.upper())
-                            
-                        upset_picks.append({
-                            'week': pick.week,
-                            'team': picked_team_abbrev.upper(),
-                            'opponent': opponent_abbrev.upper(),
-                            'majority_pct': majority_percentage
-                        })
+                        
+                        if picked_team_abbrev and opponent_abbrev:
+                            upset_picks.append({
+                                'week': pick.week,
+                                'team': picked_team_abbrev.upper(),
+                                'team_logo': f"/static/img/teams/{picked_team_abbrev.lower()}.png",
+                                'opponent': opponent_abbrev.upper(),
+                                'opponent_logo': f"/static/img/teams/{opponent_abbrev.lower()}.png",
+                                'majority_pct': majority_percentage
+                            })
         
         # Sort by how heavily favored the other team was
         upset_picks.sort(key=lambda x: x['majority_pct'], reverse=True)
