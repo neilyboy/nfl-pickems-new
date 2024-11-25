@@ -339,7 +339,96 @@ def standings(week=None):
                          selected_week=selected_week,
                          total_games=total_games)
 
-# Removed old make_picks route as it's been replaced by picks.picks
+@bp.route('/head_to_head')
+def head_to_head():
+    """Compare picks between two users"""
+    user1_id = request.args.get('user1', type=int)
+    user2_id = request.args.get('user2', type=int)
+    
+    # Get all non-admin users
+    users = User.query.filter_by(is_admin=False).order_by(User.username).all()
+    
+    if not user1_id or not user2_id:
+        return render_template('main/head_to_head.html', users=users)
+    
+    user1 = User.query.get_or_404(user1_id)
+    user2 = User.query.get_or_404(user2_id)
+    
+    # Get all picks for both users
+    user1_picks = Pick.query.filter_by(user_id=user1.id).all()
+    user2_picks = Pick.query.filter_by(user_id=user2.id).all()
+    
+    # Convert picks to dictionary for easier lookup
+    user1_picks_dict = {(p.week, p.game_id): p for p in user1_picks}
+    user2_picks_dict = {(p.week, p.game_id): p for p in user2_picks}
+    
+    # Initialize stats
+    stats = {
+        'different_picks': 0,
+        'head_to_head': {user1.id: 0, user2.id: 0},
+        'total_games': 0,
+        'agreement_percentage': 0
+    }
+    
+    # Weekly breakdown
+    weekly_breakdown = []
+    current_week = get_current_week()
+    
+    for week in range(1, current_week + 1):
+        week_games = []
+        different_picks = 0
+        
+        # Get all games for the week
+        games = GameCache.query.filter_by(week=week).all()
+        
+        for game in games:
+            pick1 = user1_picks_dict.get((week, game.game_id))
+            pick2 = user2_picks_dict.get((week, game.game_id))
+            
+            if not pick1 or not pick2:
+                continue
+                
+            stats['total_games'] += 1
+            
+            # Get winner if game is finished
+            winner = None
+            if game.home_score is not None and game.away_score is not None:
+                winner = game.home_team if game.home_score > game.away_score else game.away_team
+            
+            if pick1.team_picked != pick2.team_picked:
+                stats['different_picks'] += 1
+                different_picks += 1
+                
+                # If game is finished, update head-to-head record
+                if winner:
+                    if pick1.team_picked == winner:
+                        stats['head_to_head'][user1.id] += 1
+                    else:
+                        stats['head_to_head'][user2.id] += 1
+            
+            week_games.append({
+                'user1_pick': pick1.team_picked,
+                'user2_pick': pick2.team_picked,
+                'winner': winner
+            })
+        
+        if week_games:
+            weekly_breakdown.append({
+                'week': week,
+                'different_picks': different_picks,
+                'games': week_games
+            })
+    
+    # Calculate agreement percentage
+    if stats['total_games'] > 0:
+        stats['agreement_percentage'] = ((stats['total_games'] - stats['different_picks']) / stats['total_games']) * 100
+    
+    return render_template('main/head_to_head.html',
+                         users=users,
+                         user1=user1,
+                         user2=user2,
+                         stats=stats,
+                         weekly_breakdown=weekly_breakdown)
 
 @bp.route('/submit_picks', methods=['POST'])
 @admin_required

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container fade-in">
+    <!-- Header with User Selection -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">Head-to-Head Comparison</h4>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label for="user1" class="form-label">Player 1</label>
+                    <select class="form-select" name="user1" id="user1" required>
+                        <option value="" {% if not user1 %}selected{% endif %}>Select Player 1</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}" {% if user1 and user1.id == u.id %}selected{% endif %}>{{ u.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label for="user2" class="form-label">Player 2</label>
+                    <select class="form-select" name="user2" id="user2" required>
+                        <option value="" {% if not user2 %}selected{% endif %}>Select Player 2</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}" {% if user2 and user2.id == u.id %}selected{% endif %}>{{ u.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Compare</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if user1 and user2 %}
+    <!-- Comparison Stats -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Season Overview</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h6>Different Picks</h6>
+                        <h2 class="text-primary">{{ stats.different_picks }}</h2>
+                        <small class="text-muted">Total games picked differently</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h6>Head-to-Head Record</h6>
+                        <h2 class="{% if stats.head_to_head[user1.id] > stats.head_to_head[user2.id] %}text-success{% elif stats.head_to_head[user1.id] < stats.head_to_head[user2.id] %}text-danger{% else %}text-primary{% endif %}">
+                            {{ stats.head_to_head[user1.id] }}-{{ stats.head_to_head[user2.id] }}
+                        </h2>
+                        <small class="text-muted">When picking different teams</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h6>Pick Agreement</h6>
+                        <h2 class="text-info">{{ "%.1f"|format(stats.agreement_percentage) }}%</h2>
+                        <small class="text-muted">Games picked the same</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Breakdown -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Weekly Breakdown</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Week</th>
+                            <th>Different Picks</th>
+                            <th>{{ user1.username }}'s Pick</th>
+                            <th>{{ user2.username }}'s Pick</th>
+                            <th>Winner</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for week in weekly_breakdown %}
+                        <tr>
+                            <td>Week {{ week.week }}</td>
+                            <td>{{ week.different_picks }}</td>
+                            <td>
+                                {% for game in week.games %}
+                                <div class="{% if game.winner == game.user1_pick %}text-success{% elif game.winner %}text-danger{% endif %}">
+                                    {{ game.user1_pick }}
+                                </div>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% for game in week.games %}
+                                <div class="{% if game.winner == game.user2_pick %}text-success{% elif game.winner %}text-danger{% endif %}">
+                                    {{ game.user2_pick }}
+                                </div>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% for game in week.games %}
+                                <div>{{ game.winner or 'TBD' }}</div>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .table td {
+        vertical-align: top;
+        padding: 1rem;
+    }
+    .table td div {
+        margin-bottom: 0.5rem;
+    }
+    .table td div:last-child {
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}

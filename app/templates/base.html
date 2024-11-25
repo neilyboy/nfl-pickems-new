@@ -27,6 +27,11 @@
                             <i class="fas fa-check-circle me-1"></i>Make Picks
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.head_to_head') }}">
+                            <i class="fas fa-users-between-lines me-1"></i>Head-to-Head
+                        </a>
+                    </li>
                     {% if current_user.is_admin %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('admin.users') }}">
