@@ -23,7 +23,8 @@ COPY . .
 
 # Initialize database and migrations as root
 ENV FLASK_APP=/app/app
-RUN mkdir -p /app/instance /app/migrations/versions && \
+RUN rm -rf /app/migrations && \
+    mkdir -p /app/instance /app/migrations/versions && \
     touch /app/instance/app.db && \
     flask db init && \
     chown -R app:app /app && \
