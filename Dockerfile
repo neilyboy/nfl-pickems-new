@@ -27,7 +27,9 @@ RUN mkdir -p /app/instance /app/migrations/versions && \
     touch /app/instance/app.db && \
     chown -R app:app /app && \
     chmod -R 777 /app && \
-    chmod +x entrypoint.sh
+    chmod +x entrypoint.sh && \
+    # Allow app user to use sudo for flask db init
+    echo "app ALL=(ALL) NOPASSWD: /usr/local/bin/flask db init" >> /etc/sudoers
 
 # Set environment variables
 ENV FLASK_ENV=production

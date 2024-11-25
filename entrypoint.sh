@@ -3,10 +3,17 @@ set -e
 
 echo "Starting entrypoint script..."
 
+cd /app
+
 # Initialize migrations if they don't exist
 if [ ! -d "/app/migrations" ] || [ ! -f "/app/migrations/alembic.ini" ]; then
     echo "Initializing migrations..."
-    flask db init
+    # Try to init migrations
+    if ! flask db init; then
+        echo "Failed to initialize migrations, trying as root..."
+        # If it fails, try as root
+        su -c "flask db init" root
+    fi
 fi
 
 echo "Running database migrations..."
