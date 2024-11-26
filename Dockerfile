@@ -1,45 +1,40 @@
 FROM python:3.12-slim
 
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+ENV FLASK_APP=app
+
+# Create appuser
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+
+# Set work directory
+WORKDIR /app
+
 # Install system dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
-WORKDIR /app
+# Copy requirements first for better caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Create app user and group
-RUN groupadd -r appgroup && \
-    useradd -r -g appgroup -d /app appuser && \
-    mkdir -p /app/instance && \
-    mkdir -p /app/migrations/versions && \
+# Copy project
+COPY . .
+
+# Create and set permissions for instance directory
+RUN mkdir -p /app/instance && \
     chown -R appuser:appgroup /app && \
     chmod -R 755 /app && \
     chmod 777 /app/instance
 
-# Copy requirements and install dependencies
-COPY --chown=appuser:appgroup requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
-COPY --chown=appuser:appgroup . .
-RUN chmod +x /app/entrypoint.sh
-
-# Set environment variables
-ENV FLASK_APP=/app/app \
-    FLASK_ENV=production \
-    PYTHONPATH=/app \
-    PYTHONUNBUFFERED=1 \
-    DATABASE_URL=sqlite:////app/instance/app.db \
-    DATABASE_DIR=/app/instance
-
-# Switch to app user
+# Set the user
 USER appuser
 
-# Expose port
-EXPOSE 8000
+# Copy entrypoint script
+COPY entrypoint.sh /app/
+RUN chmod +x /app/entrypoint.sh
 
-# Set entrypoint and command
+# Run entrypoint script
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:create_app()"]
