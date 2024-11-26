@@ -18,7 +18,6 @@ services:
       - DATABASE_URL=sqlite:////app/instance/app.db
       - TZ=${TZ:-UTC}
       - INIT_DB=true
-    user: appuser
     restart: always
     env_file:
       - .env
