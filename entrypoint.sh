@@ -40,14 +40,14 @@ init_database() {
     if [ ! -f "/app/instance/app.db" ]; then
         echo "Creating new database file..."
         touch "/app/instance/app.db"
-        chown ${HOST_UID:-1000}:${HOST_GID:-1000} "/app/instance/app.db"
-        chmod 644 "/app/instance/app.db"
+        chmod 666 "/app/instance/app.db"
     fi
     
     # Initialize migrations if they don't exist
     if [ ! -d "/app/migrations" ] || [ -z "$(ls -A /app/migrations)" ]; then
         echo "Initializing migrations..."
         flask db init
+        chmod -R 777 /app/migrations
     fi
     
     # Run migrations
