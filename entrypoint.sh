@@ -47,7 +47,6 @@ init_database() {
     if [ ! -d "/app/migrations" ] || [ -z "$(ls -A /app/migrations)" ]; then
         echo "Initializing migrations..."
         flask db init
-        chmod -R 777 /app/migrations
     fi
     
     # Run migrations

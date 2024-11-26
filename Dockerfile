@@ -5,38 +5,37 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 ENV FLASK_APP=app
 
-# Create appuser
-RUN groupadd -r appgroup && useradd -r -g appgroup appuser
-
-# Set work directory
-WORKDIR /app
-
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Set work directory
+WORKDIR /app
 
 # Copy requirements first for better caching
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy entrypoint script first and set permissions
-COPY entrypoint.sh /app/
-RUN chmod +x /app/entrypoint.sh
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
 
 # Copy project
 COPY . .
 
-# Create and set permissions for instance directory
+# Create directories and set permissions
 RUN mkdir -p /app/instance && \
     mkdir -p /app/migrations/versions && \
-    chown -R appuser:appgroup /app && \
-    chmod -R 755 /app && \
-    chmod 777 /app/instance && \
-    chmod 777 /app/migrations/versions
+    chmod -R 777 /app/instance && \
+    chmod -R 777 /app/migrations
 
-# Set the user
+# Create appuser for running the application
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser && \
+    chown -R appuser:appgroup /app
+
+# Switch to appuser
 USER appuser
 
 # Run entrypoint script
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["./entrypoint.sh"]
