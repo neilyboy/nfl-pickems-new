@@ -1,4 +1,18 @@
-from datetime import datetime
+# Pull the latest changes
+git pull
+
+# Clean up existing containers
+docker compose down
+
+# Rebuild and start the containers
+docker compose up -d --build# Pull the latest changes
+git pull
+
+# Clean up existing containers
+docker compose down
+
+# Rebuild and start the containers
+docker compose up -d --buildfrom datetime import datetime
 from sqlalchemy.dialects.sqlite import JSON
 from app.extensions import db
 

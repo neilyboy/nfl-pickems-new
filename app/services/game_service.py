@@ -53,7 +53,8 @@ class GameService:
             'SF': 'San Francisco 49ers',
             'TB': 'Tampa Bay Buccaneers',
             'TEN': 'Tennessee Titans',
-            'WAS': 'Washington Commanders'
+            'WAS': 'Washington Commanders',
+            'WSH': 'Washington Commanders'
         }
         
         name = team_name.strip().upper()
@@ -65,6 +66,10 @@ class GameService:
         # If not an abbreviation, normalize the full name
         name = team_name.strip()
         
+        # Handle Washington variations
+        if 'washington' in name.lower() or 'commanders' in name.lower() or name.upper() in ['WAS', 'WSH']:
+            return 'washington commanders'
+            
         # Remove common words that might differ
         name = name.replace('Football Team', '').replace('Commanders', '').strip()
         
@@ -284,10 +289,41 @@ class GameService:
                         
                         # Get winner if game is final
                         winning_team = game_data.get('winning_team')
-                        game_status = game_data.get('status', '')
+                        
+                        # Extract status from nested structure
+                        raw_status = game_data.get('status', {}).get('type', {}).get('name', '')
+                        raw_detail = game_data.get('status', {}).get('type', {}).get('detail', '')
+                        
+                        # Map ESPN status to our internal status
+                        status_map = {
+                            'STATUS_SCHEDULED': 'Scheduled',
+                            'STATUS_IN_PROGRESS': 'In Progress',
+                            'STATUS_HALFTIME': 'Halftime',
+                            'STATUS_END_PERIOD': 'End Period',
+                            'STATUS_FINAL': 'Final',
+                            'STATUS_FINAL_OVERTIME': 'Final OT',
+                            'STATUS_POSTPONED': 'Postponed',
+                            'STATUS_CANCELED': 'Canceled',
+                            'STATUS_SUSPENDED': 'Suspended',
+                            'STATUS_DELAYED': 'Delayed'
+                        }
+                        
+                        # First check if it's final from the detail field
+                        if raw_detail:
+                            detail_lower = raw_detail.lower()
+                            if 'final' in detail_lower:
+                                if any(x in detail_lower for x in ['ot', 'overtime']):
+                                    game_status = 'Final OT'
+                                else:
+                                    game_status = 'Final'
+                            else:
+                                game_status = status_map.get(raw_status, raw_status)
+                        else:
+                            game_status = status_map.get(raw_status, raw_status)
                         
                         logger.info(f"Processing game {game_data['game_id']}: {game_data['away_team']['display_name']} @ {game_data['home_team']['display_name']}")
-                        logger.info(f"Status: {game_status}, Winner: {winning_team}")
+                        logger.info(f"Raw status: {raw_status}, Raw detail: {raw_detail}")
+                        logger.info(f"Mapped status: {game_status}, Winner: {winning_team}")
                         
                         if existing_game:
                             # Log current state
@@ -401,13 +437,47 @@ class GameService:
                     
                     # Get winner if game is final
                     winning_team = game_data.get('winning_team')
-                    game_status = game_data.get('status', '')
+                    
+                    # Extract status from nested structure
+                    raw_status = game_data.get('status', {}).get('type', {}).get('name', '')
+                    raw_detail = game_data.get('status', {}).get('type', {}).get('detail', '')
                     
                     logger.info(f"Processing game {game_data['game_id']}: {game_data['away_team']['display_name']} @ {game_data['home_team']['display_name']}")
-                    logger.info(f"Status: {game_status}, Winner: {winning_team}")
+                    logger.info(f"Status: {raw_status}, Detail: {raw_detail}")
+                    
+                    # Map ESPN status to our internal status
+                    status_map = {
+                        'STATUS_SCHEDULED': 'Scheduled',
+                        'STATUS_IN_PROGRESS': 'In Progress',
+                        'STATUS_HALFTIME': 'Halftime',
+                        'STATUS_END_PERIOD': 'End Period',
+                        'STATUS_FINAL': 'Final',
+                        'STATUS_FINAL_OVERTIME': 'Final OT',
+                        'STATUS_POSTPONED': 'Postponed',
+                        'STATUS_CANCELED': 'Canceled',
+                        'STATUS_SUSPENDED': 'Suspended',
+                        'STATUS_DELAYED': 'Delayed'
+                    }
+                    
+                    # First check if it's final from the detail field
+                    if raw_detail:
+                        detail_lower = raw_detail.lower()
+                        if 'final' in detail_lower:
+                            if any(x in detail_lower for x in ['ot', 'overtime']):
+                                game_status = 'Final OT'
+                            else:
+                                game_status = 'Final'
+                        else:
+                            game_status = status_map.get(raw_status, raw_status)
+                    else:
+                        game_status = status_map.get(raw_status, raw_status)
                     
                     if existing_game:
+                        # Log current state
+                        logger.info(f"Existing game found - Current state: status={existing_game.status}, winner={existing_game.winning_team}")
+                        
                         # Update existing game
+                        existing_game.data = json.dumps(game_data)
                         existing_game.status = game_status
                         existing_game.winning_team = winning_team
                         existing_game.home_team = game_data['home_team']['display_name']
@@ -422,7 +492,6 @@ class GameService:
                         existing_game.venue_city = game_data['venue'].get('city')
                         existing_game.venue_state = game_data['venue'].get('state')
                         existing_game.last_updated = datetime.now(timezone.utc)
-                        existing_game.data = json.dumps(game_data)
                         
                         # Update picks if game just finished
                         if existing_game.is_final():
@@ -436,6 +505,7 @@ class GameService:
                             season_type=game_data['season_type'],
                             year=game_data['year'],
                             game_id=game_data['game_id'],
+                            data=json.dumps(game_data),
                             status=game_status,
                             winning_team=winning_team,
                             home_team=game_data['home_team']['display_name'],
@@ -449,7 +519,6 @@ class GameService:
                             venue_name=game_data['venue'].get('name'),
                             venue_city=game_data['venue'].get('city'),
                             venue_state=game_data['venue'].get('state'),
-                            data=json.dumps(game_data),
                             last_updated=datetime.now(timezone.utc)
                         )
                         db.session.add(new_game)

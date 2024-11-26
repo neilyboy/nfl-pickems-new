@@ -281,6 +281,7 @@ class ESPNApiService:
         abbrev_map = {
             'WSH': 'WAS',  # Washington
             'JAC': 'JAX',  # Jacksonville
+            'WAS': 'WAS'   # Ensure WAS maps to itself
         }
         return abbrev_map.get(abbrev, abbrev)
 
