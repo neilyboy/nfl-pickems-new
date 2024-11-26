@@ -30,12 +30,5 @@ RUN mkdir -p /app/instance && \
     chmod -R 777 /app/instance && \
     chmod -R 777 /app/migrations
 
-# Create appuser for running the application
-RUN groupadd -r appgroup && useradd -r -g appgroup appuser && \
-    chown -R appuser:appgroup /app
-
-# Switch to appuser
-USER appuser
-
 # Run entrypoint script
 ENTRYPOINT ["./entrypoint.sh"]

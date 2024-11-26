@@ -5,33 +5,6 @@ echo "Starting entrypoint script..."
 
 cd /app
 
-# Set correct permissions for instance directory
-echo "Setting up instance directory permissions..."
-mkdir -p /app/instance
-chown -R ${HOST_UID:-1000}:${HOST_GID:-1000} /app/instance
-chmod 755 /app/instance
-
-# Function to wait for database to be accessible
-wait_for_db() {
-    local retries=5
-    local wait_time=1
-    local counter=0
-    echo "Waiting for database directory to be accessible..."
-    
-    while [ $counter -lt $retries ]; do
-        if [ -w "/app/instance" ]; then
-            echo "Database directory is accessible!"
-            return 0
-        fi
-        echo "Waiting for database directory... (${counter}/${retries})"
-        sleep $wait_time
-        counter=$((counter + 1))
-    done
-    
-    echo "Failed to access database directory after $retries attempts"
-    return 1
-}
-
 # Initialize database
 init_database() {
     echo "Initializing database..."
@@ -62,22 +35,8 @@ init_database() {
     fi
 }
 
-# Ensure admin user exists
-ensure_admin() {
-    echo "Ensuring admin user exists..."
-    flask ensure-admin || echo "Admin user check failed"
-}
-
 # Main execution
-echo "Checking database directory permissions..."
-if wait_for_db; then
-    init_database
-    ensure_admin
-    echo "Database setup completed successfully"
-else
-    echo "Failed to access database directory - check permissions"
-    exit 1
-fi
+init_database
 
 echo "Entrypoint script completed. Starting application..."
 
