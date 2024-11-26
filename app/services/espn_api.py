@@ -191,6 +191,10 @@ class ESPNApiService:
         status = event.get('status', {}).get('type', {}).get('name', '')
         detail = event.get('status', {}).get('type', {}).get('detail', '')
         
+        # Debug logging
+        logger.info(f"Raw game status from ESPN - Status: {status}, Detail: {detail}")
+        logger.info(f"Raw game event data: {event}")
+        
         # Map ESPN status to our internal status
         status_map = {
             'STATUS_SCHEDULED': 'Scheduled',
@@ -208,12 +212,17 @@ class ESPNApiService:
         # Check if it's a final status from the detail field
         if detail:
             detail_lower = detail.lower()
+            logger.info(f"Checking detail field: {detail_lower}")
             if 'final' in detail_lower:
                 if any(x in detail_lower for x in ['ot', 'overtime']):
+                    logger.info("Found overtime final status in detail")
                     return 'Final OT'
+                logger.info("Found final status in detail")
                 return 'Final'
         
-        return status_map.get(status, status)
+        mapped_status = status_map.get(status, status)
+        logger.info(f"Final mapped status: {mapped_status}")
+        return mapped_status
 
     @staticmethod
     def determine_winner(event):
